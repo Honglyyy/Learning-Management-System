@@ -13,6 +13,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -30,16 +35,29 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Allow CORS preflight requests to pass through unauthenticated.
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Permit register endpoint with/without trailing slash and any nested paths if applicable.
-                        .requestMatchers("/register", "/register/**").permitAll()
-                        // Spring Boot default error endpoint should not require auth (prevents confusing 401s).
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest()
-                        .authenticated())
-                .httpBasic(Customizer.withDefaults())
+                        // Allow common variations (trailing slash, etc.)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/register", "/register/", "/register/**",
+                                "/verify-otp", "/verify-otp/", "/verify-otp/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
                 .build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(false);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean

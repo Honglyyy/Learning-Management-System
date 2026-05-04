@@ -17,19 +17,15 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void sendWelcomeEmail(
-            String toEmail, String name
-    ){
+    public void sendOtp(String toEmail, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setFrom(FROM_EMAIL);
         message.setTo(toEmail);
         message.setSubject("Welcome to Ly's Learning Management System");
         message.setText(
-                "Welcome "
-                + name
-                + " to this amazing system built on Java 25, Spring Boot 4 and Oracle!!!"
-                + " \n Please go and verify your account before proceeding."
+                "To proceed further, this is your verification otp code: " + otp
+                + "\n\nThis is only for 10 minutes and dont share it around!!"
         );
         message.setSentDate(new java.util.Date());
         mailSender.send(message);

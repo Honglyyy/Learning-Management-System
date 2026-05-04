@@ -33,6 +33,10 @@ public class Users implements UserDetails {
     @Column(unique = true)
     private String email;
 
+    private String otp;
+    private Long verifyOtpExpireAt;
+    private Boolean isVerified = false;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Timestamp createdAt;

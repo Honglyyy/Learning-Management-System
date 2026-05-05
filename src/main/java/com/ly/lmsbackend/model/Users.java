@@ -1,5 +1,6 @@
 package com.ly.lmsbackend.model;
 
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,11 +27,13 @@ public class Users implements UserDetails {
     @Column(unique = true)
     private String userId;
 
+    @Column(unique = true,nullable = false)
     private String username;
 
+    @Column(nullable = false)
     private String password;
 
-    @Column(unique = true)
+    @Column(unique = true,  nullable = false)
     private String email;
 
     private String otp;
@@ -53,7 +56,7 @@ public class Users implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<SimpleGrantedAuthority> authorities = new HashSet<>();
 
-        authorities.add(new SimpleGrantedAuthority(role.name()));
+        authorities.add(new SimpleGrantedAuthority("ROLE_r"+role.name()));
 
         return authorities;
     }
@@ -75,6 +78,6 @@ public class Users implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return isVerified;
     }
 }

@@ -35,10 +35,23 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(FROM_EMAIL);
         message.setTo(toEmail);
-        message.setSubject("Welcome to Ly's Learning Management System");
+        message.setSubject("Ly's Learning Management System");
         message.setText(
                 "You have verify your account, now you can proceed to use our system. \n"
                         +"Thank you!!!"
+        );
+        message.setSentDate(new java.util.Date());
+        mailSender.send(message);
+    }
+
+    public void sendWelcomeLogin(String toEmail) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(FROM_EMAIL);
+        message.setTo(toEmail);
+        message.setSubject("Ly's Learning Management System");
+        message.setText(
+                "Welcome to Ly's Learning Management System!"
+                +"Enjoy your time with us!!!"
         );
         message.setSentDate(new java.util.Date());
         mailSender.send(message);

@@ -8,7 +8,6 @@ public record UserResponseDTO(
         String username,
         String email,
         String role,
-        Boolean isVerified,
-        Boolean isLoggedIn
+        Boolean isVerified
 ) {
 }

@@ -2,6 +2,7 @@ package com.ly.lmsbackend.controller;
 
 import com.ly.lmsbackend.dto.AuthRequest;
 import com.ly.lmsbackend.mapper.UserMapper;
+import com.ly.lmsbackend.service.EmailService;
 import com.ly.lmsbackend.util.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,12 +16,14 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final UserMapper userMapper;
+    private final EmailService emailService;
 
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserMapper userMapper) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserMapper userMapper, EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userMapper = userMapper;
+        this.emailService = emailService;
     }
 
     @PostMapping("/authenticate")
@@ -30,6 +33,7 @@ public class AuthController {
         try{
             authenticationManager.authenticate(user);
             System.out.println(jwtUtil.generateToken(userMapper.toEntity(authRequest)));
+            emailService.sendWelcomeLogin(authRequest.email());
             return ResponseEntity.ok(jwtUtil.generateToken(userMapper.toEntity(authRequest)));
         }
         catch (Exception e){

@@ -3,12 +3,15 @@ package com.ly.lmsbackend.config;
 import com.ly.lmsbackend.service.CustomUserDetailService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,14 +39,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Allow common variations (trailing slash, etc.)
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/register", "/register/", "/register/**",
-                                "/verify-otp", "/verify-otp/", "/verify-otp/**"
+                                "/verify-otp", "/verify-otp/", "/verify-otp/**",
+                                "/login","/login/","/login/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                .sessionManagement(s-> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
     }
 
@@ -75,6 +79,10 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService());
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
+    }
+    @Bean
+    public AuthenticationManager authenticationManager() {
+        return new ProviderManager(daoAuthenticationProvider());
     }
 
 }

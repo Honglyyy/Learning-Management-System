@@ -3,6 +3,7 @@ package com.ly.lmsbackend.dto;
 public record RegisterRequest(
         String email,
         String username,
-        String password
+        String password,
+        String role
 ) {
 }

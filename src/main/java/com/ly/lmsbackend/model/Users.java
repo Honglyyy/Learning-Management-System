@@ -9,8 +9,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.sql.Timestamp;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Getter
@@ -43,9 +43,16 @@ public class Users implements UserDetails {
     @UpdateTimestamp
     private Timestamp updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    private Roles role;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        authorities.add(new SimpleGrantedAuthority("ROLE_"+ role.name()));
+
+        return authorities;
     }
 
     @Override

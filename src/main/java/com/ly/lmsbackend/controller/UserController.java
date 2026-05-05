@@ -11,17 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
-
 @RestController
 public class UserController {
     private final UserService userService;
-    private final EmailService emailService;
 
     public UserController(UserService userService, EmailService emailService) {
         this.userService = userService;
-        this.emailService = emailService;
     }
 
     @PostMapping("/register")

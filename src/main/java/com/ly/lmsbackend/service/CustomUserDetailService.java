@@ -1,6 +1,8 @@
 package com.ly.lmsbackend.service;
 
+import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.UserRepository;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,7 +16,9 @@ public class CustomUserDetailService implements UserDetailsService {
     }
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        return userRepository.findByUsername(email)
+        Users users =  userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException(email + " not found"));
+
+        return User.withUsername(users.getUsername()).password(users.getPassword()).roles("USER").build();
     }
 }

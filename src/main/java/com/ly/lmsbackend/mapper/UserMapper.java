@@ -16,6 +16,7 @@ public class UserMapper {
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .userId(user.getUserId())
+                .role(String.valueOf(user.getRole()))
                 .isVerified(user.getIsVerified())
                 .build();
     }

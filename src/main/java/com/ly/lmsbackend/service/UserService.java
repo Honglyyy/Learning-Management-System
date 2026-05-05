@@ -3,6 +3,7 @@ package com.ly.lmsbackend.service;
 import com.ly.lmsbackend.dto.RegisterRequest;
 import com.ly.lmsbackend.dto.UserResponseDTO;
 import com.ly.lmsbackend.mapper.UserMapper;
+import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.UserRepository;
 import jdk.jshell.spi.ExecutionControl;
@@ -37,6 +38,7 @@ public class UserService {
         users.setPassword(passwordEncoder.encode(request.password()));
         users.setEmail(request.email());
         users.setUserId(UUID.randomUUID().toString());
+        users.setRole(Roles.valueOf(request.role()));
 
         Users saved = userRepository.save(users);
 
@@ -85,6 +87,7 @@ public class UserService {
         existingUser.setVerifyOtpExpireAt(0L);
 
         userRepository.save(existingUser);
+        emailService.successOtp(existingUser.getEmail());
         return  userMapper.dto(existingUser);
     }
 

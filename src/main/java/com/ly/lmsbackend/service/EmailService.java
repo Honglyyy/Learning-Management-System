@@ -30,4 +30,17 @@ public class EmailService {
         message.setSentDate(new java.util.Date());
         mailSender.send(message);
     }
+
+    public void successOtp(String toEmail) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(FROM_EMAIL);
+        message.setTo(toEmail);
+        message.setSubject("Welcome to Ly's Learning Management System");
+        message.setText(
+                "You have verify your account, now you can proceed to use our system. \n"
+                        +"Thank you!!!"
+        );
+        message.setSentDate(new java.util.Date());
+        mailSender.send(message);
+    }
 }

@@ -51,7 +51,7 @@ public class Courses {
             joinColumns = @JoinColumn(name = "course_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id")
     )
-    private Set<Categories> categories;
+    private List<Categories> categories;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Sections> sections;

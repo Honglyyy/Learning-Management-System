@@ -24,7 +24,7 @@ public class LessonProgress {
     private Long progressId;
 
     @Column(name = "is_completed")
-    private Boolean isCompleted;
+    private Boolean isCompleted = false;
 
     @CreationTimestamp
     @Column(updatable = false)

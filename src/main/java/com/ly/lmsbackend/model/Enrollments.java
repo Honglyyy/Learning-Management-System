@@ -30,8 +30,9 @@ public class Enrollments {
     @Column(name = "completed_at")
     private Timestamp completedAt;
 
+    
     @Column(name = "is_paid")
-    private Boolean isPaid;
+    private Boolean isPaid = true;
 
     @ManyToOne
     private Users user;

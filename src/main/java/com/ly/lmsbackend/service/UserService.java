@@ -7,6 +7,7 @@ import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.UserRepository;
 import jdk.jshell.spi.ExecutionControl;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -89,6 +90,45 @@ public class UserService {
         userRepository.save(existingUser);
         emailService.successOtp(existingUser.getEmail());
         return  userMapper.dto(existingUser);
+    }
+
+    public void sendResetOtp(String email){
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        String otp = generateOtp();
+        Long expireAt = System.currentTimeMillis() + 10 * 60 * 1000;
+
+        user.setResetOtp(otp);
+        user.setResetOtpExpireAt(expireAt);
+
+        userRepository.save(user);
+
+        try{
+            emailService.sendResetOtp(user.getEmail(), otp);
+        }
+
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public void resetPassword(String otp, String email, String password){
+        Users user =  userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if(user.getResetOtpExpireAt() < System.currentTimeMillis()){
+            throw new RuntimeException("Otp expired");
+        }
+        if(!user.getResetOtp().equals(otp)||user.getResetOtp() == null){
+            throw new RuntimeException("Invalid Otp");
+        }
+
+        user.setPassword(passwordEncoder.encode(password));
+        user.setResetOtpExpireAt(0L);
+        user.setResetOtp(null);
+
+        userRepository.save(user);
     }
 
     public String generateOtp(){

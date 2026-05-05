@@ -37,6 +37,8 @@ public class Users implements UserDetails {
     private Long verifyOtpExpireAt;
     private Boolean isVerified = false;
 
+    private String resetOtp;
+    private Long resetOtpExpireAt;
 
     @CreationTimestamp
     @Column(updatable = false)

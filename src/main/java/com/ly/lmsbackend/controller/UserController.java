@@ -1,6 +1,7 @@
 package com.ly.lmsbackend.controller;
 
 import com.ly.lmsbackend.dto.RegisterRequest;
+import com.ly.lmsbackend.dto.ResetPasswordRequest;
 import com.ly.lmsbackend.dto.UserResponseDTO;
 import com.ly.lmsbackend.dto.VerifyUserOtp;
 import com.ly.lmsbackend.model.Users;
@@ -31,6 +32,29 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @PostMapping("/send-reset-otp")
+    public void sendResetOtp(@RequestParam String email) {
+        try{
+            userService.sendResetOtp(email);
+        }
+        catch(Exception e){
+            throw new RuntimeException("Failed to send reset otp");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            userService.resetPassword(
+                    request.otp(),
+                    request.email(),
+                    request.password()
+            );
+            return ResponseEntity.ok("Password reset successful");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
     @GetMapping("/")
     public String greet(){

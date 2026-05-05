@@ -56,4 +56,19 @@ public class EmailService {
         message.setSentDate(new java.util.Date());
         mailSender.send(message);
     }
+
+    public void sendResetOtp(String toEmail, String otp) {
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setFrom(FROM_EMAIL);
+        message.setTo(toEmail);
+        message.setSubject("Ly's Learning Management System");
+        message.setText(
+                "This is your reset password otp: " + otp
+                        + "\n\nThis is only for 10 minutes and dont share it around!!"
+        );
+        message.setSentDate(new java.util.Date());
+        mailSender.send(message);
+    }
+
 }

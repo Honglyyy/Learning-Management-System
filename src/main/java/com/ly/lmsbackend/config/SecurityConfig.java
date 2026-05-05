@@ -47,7 +47,9 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/register", "/register/", "/register/**",
                                 "/verify-otp", "/verify-otp/", "/verify-otp/**",
-                                "/authenticate","/authenticate/", "/authenticate/**"
+                                "/authenticate","/authenticate/", "/authenticate/**",
+                                "/send-reset-otp","/send-reset-otp/","/send-reset-otp/**",
+                                "/reset-password","/reset-password/","/reset-password/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

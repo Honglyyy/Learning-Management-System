@@ -1,5 +1,6 @@
 package com.ly.lmsbackend.config;
 
+import com.ly.lmsbackend.filter.JwtFilter;
 import com.ly.lmsbackend.service.CustomUserDetailService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -26,9 +28,11 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
     final CustomUserDetailService customUserDetailService;
+    final JwtFilter jwtFilter;
 
-    public SecurityConfig(CustomUserDetailService customUserDetailService) {
+    public SecurityConfig(CustomUserDetailService customUserDetailService, JwtFilter jwtFilter) {
         this.customUserDetailService = customUserDetailService;
+        this.jwtFilter = jwtFilter;
     }
 
 
@@ -43,10 +47,11 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/register", "/register/", "/register/**",
                                 "/verify-otp", "/verify-otp/", "/verify-otp/**",
-                                "/login","/login/","/login/**"
+                                "/authenticate","/authenticate/", "/authenticate/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(s-> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
     }

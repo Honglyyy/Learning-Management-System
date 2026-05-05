@@ -1,5 +1,6 @@
 package com.ly.lmsbackend.mapper;
 
+import com.ly.lmsbackend.dto.AuthRequest;
 import com.ly.lmsbackend.dto.RegisterRequest;
 import com.ly.lmsbackend.dto.UserResponseDTO;
 import com.ly.lmsbackend.model.Users;
@@ -18,6 +19,15 @@ public class UserMapper {
                 .userId(user.getUserId())
                 .role(String.valueOf(user.getRole()))
                 .isVerified(user.getIsVerified())
+                .build();
+    }
+
+    public Users toEntity(
+            AuthRequest authRequest
+    ){
+        return Users.builder()
+                .email(authRequest.email())
+                .password(authRequest.password())
                 .build();
     }
 }

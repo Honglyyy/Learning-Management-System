@@ -37,6 +37,7 @@ public class Users implements UserDetails {
     private Long verifyOtpExpireAt;
     private Boolean isVerified = false;
 
+
     @CreationTimestamp
     @Column(updatable = false)
     private Timestamp createdAt;
@@ -50,7 +51,7 @@ public class Users implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<SimpleGrantedAuthority> authorities = new HashSet<>();
 
-        authorities.add(new SimpleGrantedAuthority("ROLE_"+ role.name()));
+        authorities.add(new SimpleGrantedAuthority(role.name()));
 
         return authorities;
     }

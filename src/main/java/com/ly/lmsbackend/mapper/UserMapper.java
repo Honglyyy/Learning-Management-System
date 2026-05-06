@@ -17,17 +17,9 @@ public class UserMapper {
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .userId(user.getUserId())
-                .role(String.valueOf(user.getRole()))
+                .role(user.getRole().name())
                 .isVerified(user.getIsVerified())
                 .build();
     }
 
-    public Users toEntity(
-            AuthRequest authRequest
-    ){
-        return Users.builder()
-                .email(authRequest.email())
-                .password(authRequest.password())
-                .build();
-    }
 }

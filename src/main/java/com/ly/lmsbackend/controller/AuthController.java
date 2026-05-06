@@ -2,11 +2,14 @@ package com.ly.lmsbackend.controller;
 
 import com.ly.lmsbackend.dto.AuthRequest;
 import com.ly.lmsbackend.mapper.UserMapper;
+import com.ly.lmsbackend.model.Users;
+import com.ly.lmsbackend.repository.UserRepository;
 import com.ly.lmsbackend.service.EmailService;
 import com.ly.lmsbackend.util.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,27 +20,36 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserMapper userMapper;
     private final EmailService emailService;
+    private final UserRepository userRepository;
 
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserMapper userMapper, EmailService emailService) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserMapper userMapper, EmailService emailService, UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userMapper = userMapper;
         this.emailService = emailService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/authenticate")
     public ResponseEntity<String> authenticate(@RequestBody AuthRequest authRequest) throws Exception {
-        UsernamePasswordAuthenticationToken user  = new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password());
+        Users isVerifiedUser = userRepository.findByEmail(authRequest.email())
+                .orElseThrow(()-> new UsernameNotFoundException("User not found"));
 
-        try{
-            authenticationManager.authenticate(user);
-            System.out.println(jwtUtil.generateToken(userMapper.toEntity(authRequest)));
-            emailService.sendWelcomeLogin(authRequest.email());
-            return ResponseEntity.ok(jwtUtil.generateToken(userMapper.toEntity(authRequest)));
+        if(isVerifiedUser.getIsVerified() ==  true){
+            try{
+                UsernamePasswordAuthenticationToken user  = new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password());
+                authenticationManager.authenticate(user);
+                System.out.println(jwtUtil.generateToken(isVerifiedUser));
+                emailService.sendWelcomeLogin(authRequest.email());
+                return ResponseEntity.ok(jwtUtil.generateToken(isVerifiedUser));
+            }
+            catch (Exception e){
+                e.printStackTrace();
+                return ResponseEntity.status(500).body(e.getMessage());
+            }
         }
-        catch (Exception e){
-            IO.println("Authentication Failed");
+        else{
             return ResponseEntity.badRequest().build();
         }
     }

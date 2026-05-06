@@ -39,7 +39,7 @@ public class UserService {
         users.setPassword(passwordEncoder.encode(request.password()));
         users.setEmail(request.email());
         users.setUserId(UUID.randomUUID().toString());
-        users.setRole(Roles.valueOf(request.role()));
+        users.setRole(request.role());
 
         Users saved = userRepository.save(users);
 

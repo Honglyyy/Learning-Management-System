@@ -1,6 +1,7 @@
 package com.ly.lmsbackend.service;
 
 import com.ly.lmsbackend.dto.CategoryDetailDTO;
+import com.ly.lmsbackend.dto.CategoryResponseDTO;
 import com.ly.lmsbackend.dto.CourseDTO;
 import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.model.Courses;
@@ -25,8 +26,8 @@ public class CategoryService {
         this.courses = courses;
     }
 
-    public List<Categories> getAllCategories(){
-        return categoryRepository.findAll();
+    public List<CategoryResponseDTO> getAllCategories(){
+        return categoryRepository.findAll().stream().map(c->new CategoryResponseDTO(c.getCategory())).toList();
     }
 
     public CategoryDetailDTO getCategory(Long id){
@@ -55,7 +56,6 @@ public class CategoryService {
     }
 
     public Categories addCategory(Categories category){
-        System.out.println("Hello");
         return categoryRepository.save(category);
     }
 

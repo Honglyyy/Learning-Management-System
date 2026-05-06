@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
@@ -15,7 +20,7 @@ import java.sql.Timestamp;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-
+@EntityListeners(AuditingEntityListener.class)
 public class Answers {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,9 +36,16 @@ public class Answers {
     @JoinColumn(name = "question_id")
     private Questions question;
 
-    @CreationTimestamp
-    @Column(updatable = false)
+    @CreatedBy
+    private String createdBy;
+
+    @CreatedDate
     private Timestamp createdAt;
-    @UpdateTimestamp
+
+    @LastModifiedBy
+    private String updatedBy;
+
+    @LastModifiedDate
     private Timestamp updatedAt;
+
 }

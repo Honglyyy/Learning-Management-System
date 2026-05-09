@@ -13,7 +13,6 @@ public record CourseDetailDTO(
         String instructor,
         Long sectionCount,
         Double rating,
-        Long enrolledStudentCount,
         List<String> categories,
         List<SectionDetailDTO> sections,
         List<CourseReviewResponseDTO> reviews

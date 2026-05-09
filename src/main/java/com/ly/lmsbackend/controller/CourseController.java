@@ -7,6 +7,7 @@ import com.ly.lmsbackend.service.CourseService;
 import com.ly.lmsbackend.service.SectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,17 +28,20 @@ public class CourseController {
         return new ResponseEntity<>(courseService.getAllCourses(), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/courses")
     public ResponseEntity<CourseResponseDTO> createCourse(@RequestBody CourseCreateDTO dto){
         return new ResponseEntity<>(courseService.addCourse(dto),HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/courses/{id}")
     public ResponseEntity<String> deleteCourse(@PathVariable Long id){
         courseService.deleteCourse(id);
         return new ResponseEntity<>("Course id " + id + " has now deleted!!", HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PutMapping("/api/courses/{id}")
     public ResponseEntity<CourseResponseDTO> updateCourse(
             @PathVariable Long id,
@@ -46,6 +50,7 @@ public class CourseController {
         return ResponseEntity.ok(courseService.updateCourse(id, dto));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @GetMapping("/api/courses/{id}")
     public ResponseEntity<CourseDetailDTO> getSectionByCourseId(
             @PathVariable Long id

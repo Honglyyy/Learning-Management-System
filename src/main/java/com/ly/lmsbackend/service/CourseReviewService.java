@@ -11,6 +11,8 @@ import com.ly.lmsbackend.repository.CourseReviewRepository;
 import com.ly.lmsbackend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class CourseReviewService {
 
@@ -27,16 +29,28 @@ public class CourseReviewService {
         this.courseReviewRepository = courseReviewRepository;
     }
 
-    public CourseReviewResponseDTO addReview(CourseReviewCreateDTO dto){
-        Users userId = userRepository.findById(dto.userId())
-                .orElseThrow(() -> new RuntimeException("User id " + dto.userId() + " is not found!!"));
+    public CourseReviewResponseDTO addReview(CourseReviewCreateDTO dto,String email){
+        Users userEmail = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User is not found!!"));
 
         Courses courseId = courseRepository.findById(dto.courseId())
                 .orElseThrow(() -> new RuntimeException("Course id " + dto.courseId() + " is not found!!"));
 
-        CourseReviews review = courseReviewMapper.toEntity(dto, userId, courseId);
+        CourseReviews review = courseReviewMapper.toEntity(dto, userEmail, courseId);
 
         return courseReviewMapper.toDto(courseReviewRepository.save(review));
     }
 
+    public List<CourseReviewResponseDTO> getAllReviews() {
+        return courseReviewRepository.findAll().stream().map(cr->
+                new CourseReviewResponseDTO(
+                        cr.getReviewId(),
+                        cr.getReviewText(),
+                        cr.getRating(),
+                        cr.getUser().getUsername(),
+                        cr.getCourse().getTitle()
+                )
+
+        ).toList();
+    }
 }

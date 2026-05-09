@@ -5,6 +5,7 @@ import com.ly.lmsbackend.dto.SectionResponseDTO;
 import com.ly.lmsbackend.service.SectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,18 +23,20 @@ public class SectionController {
         return new ResponseEntity<>(sectionService.getSections(), HttpStatus.OK);
     }
 
-
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/sections")
     public ResponseEntity<SectionResponseDTO> addSection(@RequestBody SectionCreateDTO dto){
         return new ResponseEntity<>(sectionService.addSection(dto),HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/sections/{id}")
     public ResponseEntity<String> deleteSection(@PathVariable Long id){
         sectionService.deleteSection(id);
         return new ResponseEntity<>("Section id " + id +" has now deleted!!", HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PutMapping("/api/sections/{id}")
     public ResponseEntity<SectionResponseDTO> updateSection(
             @PathVariable Long id,
@@ -41,8 +44,4 @@ public class SectionController {
         return new ResponseEntity<>(sectionService.updateSection(id,dto),HttpStatus.OK);
     }
 
-    //    @GetMapping("/api/sections/{id}")
-//    public ResponseEntity<SectionDetailDTO> getSection(@PathVariable Long id){
-//        return new ResponseEntity<>(sectionService.getSection(id),HttpStatus.OK);
-//    }
 }

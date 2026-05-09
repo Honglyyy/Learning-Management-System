@@ -5,6 +5,7 @@ import com.ly.lmsbackend.dto.QuestionResponseDTO;
 import com.ly.lmsbackend.service.QuestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,11 +24,13 @@ public class QuestionController {
         return new ResponseEntity<>(questionService.getQuestions(), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/questions")
     public ResponseEntity<QuestionResponseDTO> addQuestion(@RequestBody QuestionCreateDTO dto){
         return new ResponseEntity<>(questionService.addQuesion(dto),HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PutMapping("/api/questions/{id}")
     public ResponseEntity<QuestionResponseDTO> updateQuestion(
             @PathVariable Long id,
@@ -36,6 +39,7 @@ public class QuestionController {
         return new ResponseEntity<>(questionService.updateQuestion(id,dto),HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/questions/{id}")
     public ResponseEntity<String> deleteQuestion(@PathVariable Long id){
         questionService.deleteQuestion(id);

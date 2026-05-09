@@ -1,6 +1,7 @@
 package com.ly.lmsbackend.repository;
 
 import com.ly.lmsbackend.model.Courses;
+import com.ly.lmsbackend.model.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

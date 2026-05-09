@@ -6,6 +6,7 @@ import com.ly.lmsbackend.dto.LessonResponseDTO;
 import com.ly.lmsbackend.service.LessonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,11 +31,13 @@ public class LessonController {
         return new ResponseEntity<>(lessonService.getLesson(id), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/lessons")
     public ResponseEntity<LessonResponseDTO> addLesson(@RequestBody LessonCreateDTO dto){
         return new ResponseEntity<>(lessonService.addLesson(dto), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PutMapping("/api/lessons/{id}")
     public ResponseEntity<LessonResponseDTO> updateLesson(
             @PathVariable Long id,
@@ -43,6 +46,7 @@ public class LessonController {
         return new ResponseEntity<>(lessonService.updateLesson(id,dto), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/lessons/{id}")
     public ResponseEntity<String> deleteLesson(@PathVariable Long id){
         lessonService.deleteLesson(id);

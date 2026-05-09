@@ -6,7 +6,6 @@ import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseReviewRepository;
-import com.ly.lmsbackend.repository.EnrollmentRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,11 +16,9 @@ import java.util.List;
 public class CourseMapper {
 
     private final CourseReviewRepository courseReviewRepository;
-    private final EnrollmentRepository enrollmentRepository;
 
-    public CourseMapper(CourseReviewRepository courseReviewRepository, EnrollmentRepository enrollmentRepository) {
+    public CourseMapper(CourseReviewRepository courseReviewRepository) {
         this.courseReviewRepository = courseReviewRepository;
-        this.enrollmentRepository = enrollmentRepository;
     }
 
     public Courses toEntity(
@@ -54,11 +51,6 @@ public class CourseMapper {
                 .stream()
                 .mapToDouble(rate -> rate.getRating())
                 .average().orElse(0.0);
-
-        Long enrollment = enrollmentRepository.findByCourse_CourseId(course.getCourseId())
-                .stream()
-                .count();
-
         return new CourseResponseDTO(
                 course.getCourseId(),
                 course.getTitle(),
@@ -68,8 +60,7 @@ public class CourseMapper {
                 course.getCoverDir(),
                 course.getInstructor().getUsername(),
                 coursesName,
-                rating,
-                enrollment
+                rating
         );
     }
 }

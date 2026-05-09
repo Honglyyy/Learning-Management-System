@@ -21,9 +21,8 @@ public class CourseService {
     private final SectionRepository sectionRepository;
     private final SectionMapper sectionMapper;
     private final CourseReviewRepository courseReviewRepository;
-    private final EnrollmentRepository enrollmentRepository;
 
-    public CourseService(CourseRepository courseRepository, CourseMapper courseMapper, CategoryRepository categoryRepository, UserRepository userRepository, SectionRepository sectionRepository, SectionMapper sectionMapper, CourseReviewRepository courseReviewRepository, EnrollmentRepository enrollmentRepository) {
+    public CourseService(CourseRepository courseRepository, CourseMapper courseMapper, CategoryRepository categoryRepository, UserRepository userRepository, SectionRepository sectionRepository, SectionMapper sectionMapper, CourseReviewRepository courseReviewRepository) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.courseMapper = courseMapper;
@@ -31,7 +30,6 @@ public class CourseService {
         this.sectionRepository = sectionRepository;
         this.sectionMapper = sectionMapper;
         this.courseReviewRepository = courseReviewRepository;
-        this.enrollmentRepository = enrollmentRepository;
     }
 
     public List<CourseResponseDTO> getAllCourses(){
@@ -120,7 +118,6 @@ public class CourseService {
                 .mapToDouble(rate -> rate.getRating())
                 .average().orElse(5);
 
-        Long enrollmentStudentCount = enrollmentRepository.findByCourse_CourseId(courseId).stream().count();
 
         return new CourseDetailDTO(
                 course.getCourseId(),
@@ -132,7 +129,6 @@ public class CourseService {
                 course.getInstructor().getUsername(),
                 (long) course.getSections().size(),
                 rating,
-                enrollmentStudentCount,
                 categories,
                 sectionsDetail,
                 reviews

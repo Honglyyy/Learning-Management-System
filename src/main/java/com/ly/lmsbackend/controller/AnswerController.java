@@ -6,6 +6,7 @@ import com.ly.lmsbackend.model.Answers;
 import com.ly.lmsbackend.service.AnswerService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,11 +18,13 @@ public class AnswerController {
         this.answerService = answerService;
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/answers")
     ResponseEntity<AnswerResponseDTO> addAnswer(@RequestBody AnswerCreateDTO dto){
         return new ResponseEntity<>(answerService.addAnswer(dto), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PutMapping("/api/answers/{id}")
     ResponseEntity<Answers> updateAnswer(
             @PathVariable Long id,
@@ -29,6 +32,7 @@ public class AnswerController {
         return new ResponseEntity<>(answerService.updateAnswer(id,dto), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/answers/{id}")
     ResponseEntity<String> deleteAnswer(@PathVariable Long id ){
         answerService.deleteAnswer(id);

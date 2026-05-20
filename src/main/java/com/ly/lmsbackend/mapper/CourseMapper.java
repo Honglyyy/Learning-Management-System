@@ -46,6 +46,10 @@ public class CourseMapper {
                 .stream()
                 .map(Categories::getCategory)
                 .toList();
+        List<Long> categoryIds = course.getCategories()
+                .stream()
+                .map(Categories::getCategoryId)
+                .toList();
 
         Double rating = courseReviewRepository.findByCourse_CourseId(course.getCourseId())
                 .stream()
@@ -58,7 +62,9 @@ public class CourseMapper {
                 course.getPrice(),
                 course.getOverallDuration(),
                 course.getCoverDir(),
+                course.getInstructor().getId(),
                 course.getInstructor().getUsername(),
+                categoryIds,
                 coursesName,
                 rating
         );

@@ -46,5 +46,6 @@ public class Categories {
     private Timestamp updatedAt;
 
     @ManyToMany(mappedBy = "categories")
-     private List<Courses> courses;
+    @JsonIgnore
+    private List<Courses> courses;
 }

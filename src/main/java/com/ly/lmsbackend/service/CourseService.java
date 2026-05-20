@@ -39,6 +39,13 @@ public class CourseService {
                 .toList();
     }
 
+    public List<CourseResponseDTO> getCoursesByInstructor(String instructorEmail) {
+        return courseRepository.findByInstructor_Email(instructorEmail)
+                .stream()
+                .map(courseMapper::toDTO)
+                .toList();
+    }
+
 
     public CourseResponseDTO addCourse(CourseCreateDTO dto){
         Users instructor = userRepository.findById(dto.instructor())
@@ -47,6 +54,16 @@ public class CourseService {
         List<Categories> categories = categoryRepository.findAllById(dto.categoryId());
 
         Courses course = courseMapper.toEntity(dto,instructor,categories);
+
+        return courseMapper.toDTO(courseRepository.save(course));
+    }
+
+    public CourseResponseDTO addCourseForInstructor(CourseCreateDTO dto, String instructorEmail) {
+        Users instructor = userRepository.findByEmail(instructorEmail)
+                .orElseThrow(() -> new RuntimeException("Instructor not found"));
+
+        List<Categories> categories = categoryRepository.findAllById(dto.categoryId());
+        Courses course = courseMapper.toEntity(dto, instructor, categories);
 
         return courseMapper.toDTO(courseRepository.save(course));
     }

@@ -9,7 +9,9 @@ public record CourseResponseDTO(
         java.math.BigDecimal price,
         String overallDuration,
         String coverDir,
+        Long instructorId,
         String instructor,
+        List<Long> categoryIds,
         List<String> categories,
         Double rating
 ) {

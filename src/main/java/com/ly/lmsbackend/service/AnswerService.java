@@ -9,6 +9,8 @@ import com.ly.lmsbackend.repository.AnswerRepository;
 import com.ly.lmsbackend.repository.QuestionRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AnswerService {
 
@@ -29,6 +31,13 @@ public class AnswerService {
         Answers answers = answerMapper.toEntity(dto, question);
 
         return answerMapper.toDto(answerRepository.save(answers));
+    }
+
+    public List<AnswerResponseDTO> getAnswers() {
+        return answerRepository.findAll()
+                .stream()
+                .map(answerMapper::toDto)
+                .toList();
     }
 
     public Answers updateAnswer(

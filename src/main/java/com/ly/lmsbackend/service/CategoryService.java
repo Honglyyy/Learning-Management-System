@@ -27,7 +27,7 @@ public class CategoryService {
     }
 
     public List<CategoryResponseDTO> getAllCategories(){
-        return categoryRepository.findAll().stream().map(c->new CategoryResponseDTO(c.getCategory())).toList();
+        return categoryRepository.findAll().stream().map(c->new CategoryResponseDTO(c.getCategoryId(), c.getCategory())).toList();
     }
 
     public CategoryDetailDTO getCategory(Long id){

@@ -45,6 +45,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/app/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/categories", "/api/reviews").permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/register", "/register/", "/register/**",

@@ -14,6 +14,7 @@ public class LessonMapper {
                 lesson.getLessonId(),
                 lesson.getTitle(),
                 lesson.getVideoDir(),
+                lesson.getSection().getSectionId(),
                 lesson.getSection().getTitle()
         );
     }

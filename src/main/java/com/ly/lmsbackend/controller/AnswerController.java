@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 
 public class AnswerController {
@@ -16,6 +18,12 @@ public class AnswerController {
 
     public AnswerController(AnswerService answerService) {
         this.answerService = answerService;
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @GetMapping("/api/answers")
+    ResponseEntity<List<AnswerResponseDTO>> getAnswers(){
+        return new ResponseEntity<>(answerService.getAnswers(), HttpStatus.OK);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")

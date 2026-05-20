@@ -8,6 +8,7 @@ import com.ly.lmsbackend.service.SectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +33,24 @@ public class CourseController {
     @PostMapping("/api/courses")
     public ResponseEntity<CourseResponseDTO> createCourse(@RequestBody CourseCreateDTO dto){
         return new ResponseEntity<>(courseService.addCourse(dto),HttpStatus.CREATED);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @GetMapping("/api/courses/instructor/me")
+    public ResponseEntity<List<CourseResponseDTO>> getMyCourses(Authentication authentication) {
+        return ResponseEntity.ok(courseService.getCoursesByInstructor(authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    @PostMapping("/api/courses/instructor/me")
+    public ResponseEntity<CourseResponseDTO> createMyCourse(
+            @RequestBody CourseCreateDTO dto,
+            Authentication authentication
+    ) {
+        return new ResponseEntity<>(
+                courseService.addCourseForInstructor(dto, authentication.getName()),
+                HttpStatus.CREATED
+        );
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")

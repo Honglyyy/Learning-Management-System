@@ -134,4 +134,10 @@ public class UserService {
     public String generateOtp(){
         return String.valueOf(ThreadLocalRandom.current().nextInt(100000,1000000));
     }
+
+    public java.util.List<UserResponseDTO> getAllUsers(){
+        return userRepository.findAll().stream()
+                .map(userMapper::dto)
+                .toList();
+    }
 }

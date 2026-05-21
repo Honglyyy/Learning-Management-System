@@ -15,6 +15,8 @@ import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @RestController
 public class UserController {
     private final UserService userService;
@@ -82,6 +84,12 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/api/users")
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers(){
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/")

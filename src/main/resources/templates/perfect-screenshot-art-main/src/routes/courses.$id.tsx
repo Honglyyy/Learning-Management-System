@@ -98,7 +98,7 @@ function CourseDetail() {
                     {s.duration && <span className="text-xs text-muted-foreground">{s.duration}</span>}
                   </div>
                 </div>
-              ))}
+              )).reverse()}
             </div>
           ) : <p className="text-sm text-muted-foreground">No sections yet.</p>}
 

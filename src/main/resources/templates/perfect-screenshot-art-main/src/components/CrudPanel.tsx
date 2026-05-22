@@ -30,7 +30,7 @@ export type CrudConfig = {
   toBody?: (form: Record<string, any>) => any;
 };
 
-export function CrudPanel({ cfg }: { cfg: CrudConfig }) {
+export function  CrudPanel({ cfg }: { cfg: CrudConfig }) {
   const qc = useQueryClient();
   const list = useQuery<any[]>({ queryKey: [cfg.queryKey], queryFn: () => api(`/api/${cfg.resource}`) });
 

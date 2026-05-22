@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Course = {
-  id: number;
+  courseId: number;
   title: string;
   description?: string;
   price?: number;
@@ -91,7 +91,9 @@ function Index() {
           <p className="text-muted-foreground">No courses found.</p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((c) => <CourseCard key={c.id} c={c} onOpen={() => nav({ to: "/courses/$id", params: { id: String(c.id) } })} />)}
+
+            {/*{filtered.map((c) => <CourseCard key={c.id} c={c} onOpen={() => nav({ to: "/courses/$id", params: { id: String(c.id) } })} />)}*/}
+            {filtered.map((c) => <CourseCard key={c.courseId} c={c} onOpen={() => nav({ to: "/courses/$id", params: { id: String(c.courseId) } })} />)}
           </div>
         )}
       </section>
@@ -103,10 +105,9 @@ function CourseCard({ c, onOpen }: { c: Course; onOpen: () => void }) {
   const cover = mediaUrl(c.coverDir);
   const inst = typeof c.instructor === "object" ? c.instructor?.username || c.instructor?.email : c.instructorName;
   const cats = (c.categories || []).map((x: any) => (typeof x === "string" ? x : x?.category)).filter(Boolean);
-  const id = c.id;
+  const id = c.courseId;
   return (
     <Card className="flex flex-col overflow-hidden transition hover:shadow-lg">
-      <h1>{id}</h1>
       <div className="aspect-video w-full overflow-hidden bg-muted">
         {cover ? (
           <img src={cover} alt={c.title} className="h-full w-full object-cover" loading="lazy" />

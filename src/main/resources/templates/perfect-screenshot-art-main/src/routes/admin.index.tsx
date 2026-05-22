@@ -72,7 +72,7 @@ function AdminPage() {
           {section === "categories" && <CrudPanel cfg={{
             resource: "categories", title: "Categories", queryKey: "admin-categories",
             fields: [{ name: "category", label: "Name" }],
-            columns: [{ key: "id", label: "ID" }, { key: "category", label: "Name" }],
+            columns: [{ key: "categoryId", label: "ID" }, { key: "category", label: "Name" }],
             emptyForm: { category: "" },
           }} />}
           {section === "sections" && <SectionPanel />}
@@ -136,14 +136,14 @@ function AdminCourses() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Title</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {data?.map((c: any) => (
-                <TableRow key={c.id}>
-                  <TableCell>{c.id}</TableCell>
+                <TableRow key={c.courseId}>
+                  <TableCell>{c.courseId}</TableCell>
                   <TableCell>{c.title}</TableCell>
                   <TableCell>${Number(c.price ?? 0).toFixed(2)}</TableCell>
                   <TableCell>{c.overallDuration}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <CourseDialog mode="edit" initial={c} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-courses"] })} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete course?")) del.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete course?")) del.mutate(c.courseId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -184,7 +184,13 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
     onError: (e) => setError(e),
   });
 
-  const catOptions = categories?.map((c) => ({ id: c.id, label: c.toLowerCase })) || [];
+  const catOptions =
+      categories?.map((c) => ({
+        id: c.courseId,
+        label: c.category?.toLowerCase(),
+      })) || [];
+
+  console.table(categories)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { title: "", description: "", price: 0, overallDuration: "", coverDir: "", instructor: 1, categoryId: [] }); setError(null); } }}>
@@ -219,10 +225,11 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
 function AdminLessons() {
   const qc = useQueryClient();
   const list = useQuery<any[]>({ queryKey: ["admin-lessons"], queryFn: () => api("/api/lessons") });
+  const { data: sections } = useQuery<any[]>({ queryKey: ["admin-sections"], queryFn: () => api("/api/sections") });
   const del = useMutation({ mutationFn: (id: number) => api(`/api/lessons/${id}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-lessons"] }); } });
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Lessons</h2><LessonDialog mode="create" onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} /></div>
+      <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Lessons</h2><LessonDialog sections={sections || []} mode="create" onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} /></div>
       <ApiAlert error={list.error} />
       {list.isLoading ? <Skeleton className="h-40" /> : (
         <div className="rounded-md border border-border bg-card">
@@ -230,11 +237,11 @@ function AdminLessons() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Title</TableHead><TableHead>Section</TableHead><TableHead>Video</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((l: any) => (
-                <TableRow key={l.id}>
-                  <TableCell>{l.id}</TableCell><TableCell>{l.title}</TableCell><TableCell>{l.sectionId}</TableCell>
+                <TableRow key={l.lessonId}>
+                  <TableCell>{l.lessonId}</TableCell><TableCell>{l.title}</TableCell><TableCell>{l.sectionId}</TableCell>
                   <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{l.videoDir}</TableCell>
                   <TableCell className="space-x-1 text-right">
-                    <LessonDialog mode="edit" initial={l} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} />
+                    <LessonDialog sections={sections || []} mode="edit" initial={l} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(l.id); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
@@ -247,7 +254,7 @@ function AdminLessons() {
   );
 }
 
-function LessonDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; initial?: any; onSaved: () => void }) {
+function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "edit"; initial?: any; sections:any[]; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(() => initial || { title: "", videoDir: "", sectionId: "" });
   const [error, setError] = useState<unknown>(null);
@@ -281,7 +288,13 @@ function LessonDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
         <div className="space-y-3">
           <ApiAlert error={error} />
           <div className="space-y-1"><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Section ID</Label><Input type="number" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })} /></div>
+          {/*<div className="space-y-1"><Label>Section ID</Label><Input type="number" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })} /></div>*/}
+          <div className="space-y-1"><Label>Course</Label>
+            <Select value={String(form.sectionId)} onValueChange={(v) => setForm({ ...form, sectionId: parseInt(v) })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{sections.map((s) => <SelectItem key={s.sectionId} value={String(s.sectionId)}>{s.title}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1"><Label>Video</Label>
             <div className="flex items-center gap-2"><Input type="file" accept="video/*" onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />{uploading && <Upload className="h-4 w-4 animate-pulse" />}</div>
             {form.videoDir && <p className="text-xs text-muted-foreground truncate">{form.videoDir}</p>}
@@ -387,8 +400,8 @@ function AdminEnrollments() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>User</TableHead><TableHead>Course</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((e: any) => (
-                <TableRow key={e.id}>
-                  <TableCell>{e.id}</TableCell>
+                <TableRow key={e.enrollmentId}>
+                  <TableCell>{e.enrollmentId}</TableCell>
                   <TableCell>{e.username || e.userEmail || `#${e.userId}`}</TableCell>
                   <TableCell>{e.courseTitle || `#${e.courseId}`}</TableCell>
                   <TableCell>
@@ -425,7 +438,7 @@ function SectionPanel() {
             <TableBody>
               {list.data?.map((s: any) => (
                 <TableRow key={s.id}>
-                  <TableCell>{s.id}</TableCell><TableCell>{s.title}</TableCell><TableCell>{s.duration}</TableCell><TableCell>{courses?.find((c) => c.id === s.courseId)?.title || s.courseId}</TableCell>
+                  <TableCell>{s.sectionId}</TableCell><TableCell>{s.title}</TableCell><TableCell>{s.duration}</TableCell><TableCell>{courses?.find((c) => c.courseId === s.courseId)?.title || s.courseId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <SectionDialog mode="edit" initial={s} courses={courses || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-sections"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
@@ -445,6 +458,7 @@ function SectionDialog({ mode, initial, courses, onSaved }: { mode: "create" | "
   const [form, setForm] = useState<any>(() => initial || { title: "", duration: "", courseId: "" });
   const [error, setError] = useState<unknown>(null);
 
+  // console.log(courses.map(c => c.courseId))
   const save = useMutation({
     mutationFn: () => {
       const body = { ...form, courseId: Number(form.courseId) };
@@ -467,7 +481,7 @@ function SectionDialog({ mode, initial, courses, onSaved }: { mode: "create" | "
           <div className="space-y-1"><Label>Course</Label>
             <Select value={String(form.courseId)} onValueChange={(v) => setForm({ ...form, courseId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{courses.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}</SelectContent>
+              <SelectContent>{courses.map((c) => <SelectItem key={c.courseId} value={String(c.courseId)}>{c.title}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
@@ -493,8 +507,8 @@ function QuizPanel() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Title</TableHead><TableHead>Points</TableHead><TableHead>Lesson</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((q: any) => (
-                <TableRow key={q.id}>
-                  <TableCell>{q.id}</TableCell><TableCell>{q.title}</TableCell><TableCell>{q.totalPoints}</TableCell><TableCell>{lessons?.find((l) => l.id === q.lessonId)?.title || q.lessonId}</TableCell>
+                <TableRow key={q.quizId}>
+                  <TableCell>{q.quizId}</TableCell><TableCell>{q.title}</TableCell><TableCell>{q.totalPoints}</TableCell><TableCell>{lessons?.find((l) => l.id === q.lessonId)?.title || q.lessonId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <QuizDialog mode="edit" initial={q} lessons={lessons || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-quizzes"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.id); }}><Trash2 className="h-4 w-4" /></Button>
@@ -536,7 +550,7 @@ function QuizDialog({ mode, initial, lessons, onSaved }: { mode: "create" | "edi
           <div className="space-y-1"><Label>Lesson</Label>
             <Select value={String(form.lessonId)} onValueChange={(v) => setForm({ ...form, lessonId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{lessons.map((l) => <SelectItem key={l.id} value={String(l.id)}>{l.title}</SelectItem>)}</SelectContent>
+              <SelectContent>{lessons.map((l) => <SelectItem key={l.id} value={String(l.lessonId)}>{l.title}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
@@ -562,8 +576,8 @@ function QuestionPanel() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Question</TableHead><TableHead>Quiz</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((q: any) => (
-                <TableRow key={q.id}>
-                  <TableCell>{q.id}</TableCell><TableCell className="max-w-xs truncate">{q.questionText}</TableCell><TableCell>{quizzes?.find((z) => z.id === q.quizId)?.title || q.quizId}</TableCell>
+                <TableRow key={q.questionId}>
+                  <TableCell>{q.questionId}</TableCell><TableCell className="max-w-xs truncate">{q.questionText}</TableCell><TableCell>{quizzes?.find((z) => z.id === q.quizId)?.title || q.quizId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <QuestionDialog mode="edit" initial={q} quizzes={quizzes || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-questions"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.id); }}><Trash2 className="h-4 w-4" /></Button>
@@ -604,7 +618,7 @@ function QuestionDialog({ mode, initial, quizzes, onSaved }: { mode: "create" | 
           <div className="space-y-1"><Label>Quiz</Label>
             <Select value={String(form.quizId)} onValueChange={(v) => setForm({ ...form, quizId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{quizzes.map((z) => <SelectItem key={z.id} value={String(z.id)}>{z.title}</SelectItem>)}</SelectContent>
+              <SelectContent>{quizzes.map((z) => <SelectItem key={z.quizId} value={String(z.quizId)}>{z.title}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
@@ -630,8 +644,8 @@ function AnswerPanel() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Answer</TableHead><TableHead>Correct</TableHead><TableHead>Question</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((a: any) => (
-                <TableRow key={a.id}>
-                  <TableCell>{a.id}</TableCell><TableCell className="max-w-xs truncate">{a.answerText}</TableCell><TableCell>{a.isCorrect ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell><TableCell>{questions?.find((q) => q.id === a.questionId)?.questionText?.substring(0, 30) || a.questionId}</TableCell>
+                <TableRow key={a.answerId}>
+                  <TableCell>{a.answerId}</TableCell><TableCell className="max-w-xs truncate">{a.answerText}</TableCell><TableCell>{a.isCorrect ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell><TableCell>{questions?.find((q) => q.id === a.questionId)?.questionText?.substring(0, 30) || a.questionId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <AnswerDialog mode="edit" initial={a} questions={questions || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-answers"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(a.id); }}><Trash2 className="h-4 w-4" /></Button>
@@ -672,7 +686,7 @@ function AnswerDialog({ mode, initial, questions, onSaved }: { mode: "create" | 
           <div className="space-y-1"><Label>Question</Label>
             <Select value={String(form.questionId)} onValueChange={(v) => setForm({ ...form, questionId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{questions.map((q) => <SelectItem key={q.id} value={String(q.id)}>{q.questionText?.substring(0, 50)}</SelectItem>)}</SelectContent>
+              <SelectContent>{questions.map((q) => <SelectItem key={q.questionId} value={String(q.questionId)}>{q.questionText?.substring(0, 50)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="flex items-center gap-2">

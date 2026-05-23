@@ -123,6 +123,7 @@ function AdminCourses() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  console.log(data)
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -133,12 +134,24 @@ function AdminCourses() {
       {isLoading ? <Skeleton className="h-40" /> : (
         <div className="rounded-md border border-border bg-card">
           <Table>
-            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Title</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Cover</TableHead>
+                <TableHead>Categories</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {data?.map((c: any) => (
                 <TableRow key={c.courseId}>
                   <TableCell>{c.courseId}</TableCell>
                   <TableCell>{c.title}</TableCell>
+                  <TableCell><img src={mediaUrl(c.coverDir)} alt="" width={"100px"}/></TableCell>
+                  <TableCell>{c.categories.join(" , ")}</TableCell>
                   <TableCell>${Number(c.price ?? 0).toFixed(2)}</TableCell>
                   <TableCell>{c.overallDuration}</TableCell>
                   <TableCell className="space-x-1 text-right">
@@ -190,7 +203,7 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
         label: c.category?.toLowerCase(),
       })) || [];
 
-  console.table(catOptions)
+  // console.table(catOptions)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { title: "", description: "", price: 0, overallDuration: "", coverDir: "", instructor: 1, categoryId: [] }); setError(null); } }}>
@@ -239,7 +252,9 @@ function AdminLessons() {
               {list.data?.map((l: any) => (
                 <TableRow key={l.lessonId}>
                   <TableCell>{l.lessonId}</TableCell><TableCell>{l.title}</TableCell><TableCell>{l.sectionId}</TableCell>
-                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{l.videoDir}</TableCell>
+                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
+                    <video src={mediaUrl(l.videoDir)} width={"100px"} controls/>
+                  </TableCell>
                   <TableCell className="space-x-1 text-right">
                     <LessonDialog sections={sections || []} mode="edit" initial={l} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(l.lessonId); }}><Trash2 className="h-4 w-4" /></Button>

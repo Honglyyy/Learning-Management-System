@@ -186,11 +186,11 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
 
   const catOptions =
       categories?.map((c) => ({
-        id: c.courseId,
+        id: c.categoryId,
         label: c.category?.toLowerCase(),
       })) || [];
 
-  console.table(categories)
+  console.table(catOptions)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { title: "", description: "", price: 0, overallDuration: "", coverDir: "", instructor: 1, categoryId: [] }); setError(null); } }}>
@@ -206,7 +206,7 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
             <div className="space-y-1"><Label>Duration</Label><Input value={form.overallDuration} onChange={(e) => setForm({ ...form, overallDuration: e.target.value })} /></div>
           </div>
           <div className="space-y-1"><Label>Instructor ID</Label><Input type="number" value={form.instructor || ""} onChange={(e) => setForm({ ...form, instructor: parseInt(e.target.value) || null })} /></div>
-          <div className="space-y-1"><Label>Categories</Label>{catsLoading ? <Skeleton className="h-10" /> : <MultiSelect options={catOptions} selected={form.categoryId} onChange={(ids) => setForm({ ...form, categoryId: ids })} placeholder="Select categories..." />}</div>
+          <div className="space-y-1"><Label>Categories</Label>{catsLoading ? <Skeleton className="h-10" /> : <MultiSelect options={catOptions} selected={form.categoryId||[]} onChange={(ids) => setForm({ ...form, categoryId: ids })} placeholder="Select categories..." />}</div>
           <div className="space-y-1">
             <Label>Cover</Label>
             <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "e
     mutationFn: () => {
       const body = { ...form, sectionId: Number(form.sectionId) };
       if (mode === "create") return api("/api/lessons", { method: "POST", body });
-      return api(`/api/lessons/${initial.id}`, { method: "PUT", body });
+      return api(`/api/lessons/${initial.lessonId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); onSaved(); },
     onError: (e) => setError(e),
@@ -463,7 +463,7 @@ function SectionDialog({ mode, initial, courses, onSaved }: { mode: "create" | "
     mutationFn: () => {
       const body = { ...form, courseId: Number(form.courseId) };
       if (mode === "create") return api("/api/sections", { method: "POST", body });
-      return api(`/api/sections/${initial.id}`, { method: "PUT", body });
+      return api(`/api/sections/${initial.sectionId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); onSaved(); },
     onError: (e) => setError(e),
@@ -532,7 +532,7 @@ function QuizDialog({ mode, initial, lessons, onSaved }: { mode: "create" | "edi
     mutationFn: () => {
       const body = { ...form, lessonId: Number(form.lessonId) };
       if (mode === "create") return api("/api/quizzes", { method: "POST", body });
-      return api(`/api/quizzes/${initial.id}`, { method: "PUT", body });
+      return api(`/api/quizzes/${initial.quizId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); onSaved(); },
     onError: (e) => setError(e),
@@ -601,7 +601,7 @@ function QuestionDialog({ mode, initial, quizzes, onSaved }: { mode: "create" | 
     mutationFn: () => {
       const body = { ...form, quizId: Number(form.quizId) };
       if (mode === "create") return api("/api/questions", { method: "POST", body });
-      return api(`/api/questions/${initial.id}`, { method: "PUT", body });
+      return api(`/api/questions/${initial.questionId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); onSaved(); },
     onError: (e) => setError(e),
@@ -669,7 +669,7 @@ function AnswerDialog({ mode, initial, questions, onSaved }: { mode: "create" | 
     mutationFn: () => {
       const body = { ...form, questionId: Number(form.questionId) };
       if (mode === "create") return api("/api/answers", { method: "POST", body });
-      return api(`/api/answers/${initial.id}`, { method: "PUT", body });
+      return api(`/api/answers/${initial.answerId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); onSaved(); },
     onError: (e) => setError(e),

@@ -8,6 +8,7 @@ import com.ly.lmsbackend.repository.LessonRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
 import com.ly.lmsbackend.repository.SectionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -55,8 +56,17 @@ public class LessonService {
         return lessonMapper.toDto(lessonRepository.save(existingLesson));
     }
 
+    @Transactional
     public void deleteLesson(Long id) {
-        lessonRepository.deleteById(id);
+
+        Lessons lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lesson not found"));
+
+        if (lesson.getQuiz() != null) {
+            lesson.getQuiz().setLesson(null);
+        }
+
+        lessonRepository.delete(lesson);
     }
 
     public LessonQuizDTO getLesson(Long lessonId){

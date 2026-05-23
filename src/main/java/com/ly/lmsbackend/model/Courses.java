@@ -72,6 +72,11 @@ public class Courses {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CourseReviews> reviews;
 
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Enrollments> enrollments;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Payments> payments;
 
     @ManyToOne
     @JoinColumn(name = "instructor_id")

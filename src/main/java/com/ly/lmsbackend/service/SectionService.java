@@ -16,15 +16,13 @@ public class SectionService {
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
     private final QuizRepository quizRepository;
-    private final Quizzes quizzes;
 
-    public SectionService(SectionRepository sectionRepository, SectionMapper sectionMapper, CourseRepository courseRepository, CategoryRepository categoryRepository, LessonRepository lessonRepository, QuizRepository quizRepository, Quizzes quizzes) {
+    public SectionService(SectionRepository sectionRepository, SectionMapper sectionMapper, CourseRepository courseRepository, CategoryRepository categoryRepository, LessonRepository lessonRepository, QuizRepository quizRepository) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
         this.sectionMapper = sectionMapper;
         this.lessonRepository = lessonRepository;
         this.quizRepository = quizRepository;
-        this.quizzes = quizzes;
     }
 
     public List<SectionResponseDTO> getSections(){
@@ -57,7 +55,7 @@ public class SectionService {
         existingSection.setDuration(dto.duration());
         existingSection.setCourse(courseId);
 
-        return sectionMapper.toDto(existingSection);
+        return sectionMapper.toDto(sectionRepository.save(existingSection));
     }
 
     public void deleteSection(Long id){

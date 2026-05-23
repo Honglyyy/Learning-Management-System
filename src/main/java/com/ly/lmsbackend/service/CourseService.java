@@ -8,6 +8,7 @@ import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -68,8 +69,16 @@ public class CourseService {
         return courseMapper.toDTO(courseRepository.save(course));
     }
 
+    @Transactional
     public void deleteCourse(Long id){
-        courseRepository.deleteById(id);
+
+        Courses course = courseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        // remove rows from course_category
+        course.getCategories().clear();
+
+        courseRepository.delete(course);
     }
 
     public CourseResponseDTO updateCourse(Long id, CourseCreateDTO dto){

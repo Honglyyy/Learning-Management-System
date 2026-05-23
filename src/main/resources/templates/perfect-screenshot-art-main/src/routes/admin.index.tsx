@@ -118,7 +118,7 @@ function AdminCourses() {
   const qc = useQueryClient();
   const { data, isLoading, error } = useQuery<any[]>({ queryKey: ["admin-courses"], queryFn: () => api("/api/courses", { auth: false }) });
   const del = useMutation({
-    mutationFn: (id: number) => api(`/api/courses/${id}`, { method: "DELETE" }),
+    mutationFn: (courseId: number) => api(`/api/courses/${courseId}`, { method: "DELETE" }),
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-courses"] }); },
     onError: (e: any) => toast.error(e.message),
   });
@@ -226,7 +226,7 @@ function AdminLessons() {
   const qc = useQueryClient();
   const list = useQuery<any[]>({ queryKey: ["admin-lessons"], queryFn: () => api("/api/lessons") });
   const { data: sections } = useQuery<any[]>({ queryKey: ["admin-sections"], queryFn: () => api("/api/sections") });
-  const del = useMutation({ mutationFn: (id: number) => api(`/api/lessons/${id}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-lessons"] }); } });
+  const del = useMutation({ mutationFn: (lessonId: number) => api(`/api/lessons/${lessonId}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-lessons"] }); } });
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Lessons</h2><LessonDialog sections={sections || []} mode="create" onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} /></div>
@@ -242,7 +242,7 @@ function AdminLessons() {
                   <TableCell className="max-w-xs truncate text-xs text-muted-foreground">{l.videoDir}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <LessonDialog sections={sections || []} mode="edit" initial={l} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(l.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(l.lessonId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -425,7 +425,7 @@ function SectionPanel() {
   const qc = useQueryClient();
   const list = useQuery<any[]>({ queryKey: ["admin-sections"], queryFn: () => api("/api/sections") });
   const { data: courses } = useQuery<any[]>({ queryKey: ["admin-courses"], queryFn: () => api("/api/courses") });
-  const del = useMutation({ mutationFn: (id: number) => api(`/api/sections/${id}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-sections"] }); } });
+  const del = useMutation({ mutationFn: (sectionId: number) => api(`/api/sections/${sectionId}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-sections"] }); } });
 
   return (
     <div className="space-y-4">
@@ -441,7 +441,7 @@ function SectionPanel() {
                   <TableCell>{s.sectionId}</TableCell><TableCell>{s.title}</TableCell><TableCell>{s.duration}</TableCell><TableCell>{courses?.find((c) => c.courseId === s.courseId)?.title || s.courseId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <SectionDialog mode="edit" initial={s} courses={courses || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-sections"] })} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(s.sectionId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -495,7 +495,7 @@ function QuizPanel() {
   const qc = useQueryClient();
   const list = useQuery<any[]>({ queryKey: ["admin-quizzes"], queryFn: () => api("/api/quizzes") });
   const { data: lessons } = useQuery<any[]>({ queryKey: ["admin-lessons"], queryFn: () => api("/api/lessons") });
-  const del = useMutation({ mutationFn: (id: number) => api(`/api/quizzes/${id}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-quizzes"] }); } });
+  const del = useMutation({ mutationFn: (quizId: number) => api(`/api/quizzes/${quizId}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-quizzes"] }); } });
 
   return (
     <div className="space-y-4">
@@ -511,7 +511,7 @@ function QuizPanel() {
                   <TableCell>{q.quizId}</TableCell><TableCell>{q.title}</TableCell><TableCell>{q.totalPoints}</TableCell><TableCell>{lessons?.find((l) => l.id === q.lessonId)?.title || q.lessonId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <QuizDialog mode="edit" initial={q} lessons={lessons || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-quizzes"] })} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.quizId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -550,7 +550,7 @@ function QuizDialog({ mode, initial, lessons, onSaved }: { mode: "create" | "edi
           <div className="space-y-1"><Label>Lesson</Label>
             <Select value={String(form.lessonId)} onValueChange={(v) => setForm({ ...form, lessonId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{lessons.map((l) => <SelectItem key={l.id} value={String(l.lessonId)}>{l.title}</SelectItem>)}</SelectContent>
+              <SelectContent>{lessons.map((l) => <SelectItem key={l.lessonId} value={String(l.lessonId)}>{l.title}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>

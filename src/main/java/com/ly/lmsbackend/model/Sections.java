@@ -52,7 +52,7 @@ public class Sections {
     @JoinColumn(name = "course_id")
     private Courses course;
 
-    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lessons> lessons;
 }
 

@@ -34,11 +34,11 @@ public class Quizzes {
     @Column(name = "total_point")
     private Double totalPoint;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "lesson_id")
     private Lessons lesson;
 
-    @OneToMany(mappedBy = "quiz")
+    @OneToMany(mappedBy = "quiz",cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Questions> questions;
 
     @CreatedBy

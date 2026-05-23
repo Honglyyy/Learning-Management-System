@@ -53,6 +53,6 @@ public class Lessons {
     private Sections section;
 
 
-    @OneToOne(mappedBy = "lesson")
+    @OneToOne(mappedBy = "lesson",cascade = CascadeType.ALL, orphanRemoval = true)
     private Quizzes quiz;
 }

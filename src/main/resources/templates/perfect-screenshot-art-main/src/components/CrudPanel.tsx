@@ -55,11 +55,11 @@ export function  CrudPanel({ cfg }: { cfg: CrudConfig }) {
             <TableHeader><TableRow>{cfg.columns.map((c) => <TableHead key={c.key}>{c.label}</TableHead>)}<TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data.map((row: any) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.categoryId}>
                   {cfg.columns.map((c) => <TableCell key={c.key}>{c.render ? c.render(row) : String(row[c.key] ?? "")}</TableCell>)}
                   <TableCell className="space-x-1 text-right">
                     <EditDialog cfg={cfg} mode="edit" initial={row} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this record?")) del.mutate(row.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete this record?")) del.mutate(row.categoryId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -81,7 +81,7 @@ function EditDialog({ cfg, mode, initial }: { cfg: CrudConfig; mode: "create" | 
     mutationFn: () => {
       const body = cfg.toBody ? cfg.toBody(form) : form;
       if (mode === "create") return api(`/api/${cfg.resource}`, { method: "POST", body });
-      return api(`/api/${cfg.resource}/${initial.id}`, { method: "PUT", body });
+      return api(`/api/${cfg.resource}/${initial.categoryId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); qc.invalidateQueries({ queryKey: [cfg.queryKey] }); },
     onError: (e) => setError(e),

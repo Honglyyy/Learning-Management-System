@@ -72,6 +72,8 @@ function CourseDetail() {
   const inst = typeof c.instructor === "object" ? c.instructor?.username || c.instructor?.email : c.instructorName;
   const cats = (c.categories || []).map((x: any) => (typeof x === "string" ? x : x?.category)).filter(Boolean);
 
+  console.table(c)
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />

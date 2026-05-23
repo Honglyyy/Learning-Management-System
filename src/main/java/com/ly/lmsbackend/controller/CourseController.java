@@ -69,7 +69,7 @@ public class CourseController {
         return ResponseEntity.ok(courseService.updateCourse(id, dto));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR','USER')")
     @GetMapping("/api/courses/{id}")
     public ResponseEntity<CourseDetailDTO> getSectionByCourseId(
             @PathVariable Long id

@@ -9,10 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 public record CourseReviewCreateDTO(
         @NotBlank
         String reviewText,
+
         @NotNull
         @Min(1)
         @Max(5)
-        Double rating,
-        Long courseId
-) {
-}
+        Integer rating
+) {}

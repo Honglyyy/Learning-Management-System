@@ -9,11 +9,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class CourseReviewMapper {
-    public CourseReviewResponseDTO toDto(CourseReviews review){
 
-        Users user = new Users();
-        Courses course = new Courses();
-
+    public CourseReviewResponseDTO toDto(CourseReviews review) {
         return new CourseReviewResponseDTO(
                 review.getReviewId(),
                 review.getReviewText(),
@@ -23,7 +20,7 @@ public class CourseReviewMapper {
         );
     }
 
-    public CourseReviews toEntity(CourseReviewCreateDTO dto, Users user, Courses course){
+    public CourseReviews toEntity(CourseReviewCreateDTO dto, Users user, Courses course) {
         CourseReviews review = new CourseReviews();
 
         review.setReviewText(dto.reviewText());

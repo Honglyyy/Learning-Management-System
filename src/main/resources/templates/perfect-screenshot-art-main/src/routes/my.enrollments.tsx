@@ -36,26 +36,72 @@ function Page() {
         {isLoading ? <div className="grid gap-4 md:grid-cols-2">{[1,2,3,4].map(i => <Skeleton key={i} className="h-32" />)}</div> :
           !data || data.length === 0 ? <p className="text-muted-foreground">You haven't enrolled in any courses yet.</p> :
           <div className="grid gap-4 md:grid-cols-2">
-            {data.map((e: any) => {
-              const title = e.courseTitle || e.course?.title || `Course #${e.courseId}`;
-              const inst = e.instructorName || e.course?.instructor?.username;
-              const courseId = e.courseId ?? e.course?.id;
-              return (
-                <Card key={e.id}>
-                  <CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                      {inst && <span>{inst}</span>}
-                      <Badge variant="secondary">{e.status}</Badge>
-                      {e.createdAt && <span>Enrolled {new Date(e.createdAt).toLocaleDateString()}</span>}
-                    </div>
-                    <div className="mt-3 flex justify-end">
-                      <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => cancel.mutate(courseId)}>Cancel</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            <div className="grid gap-4 md:grid-cols-2">
+              {data.map((e: any) => {
+                const course = e.course;
+
+                const courseId = course?.courseId ?? e.courseId;
+
+                const title = course?.title || e.courseTitle || `Course #${courseId}`;
+                const inst = course?.instructor?.username || e.instructorName;
+
+                return (
+                    <Card key={e.id} className="hover:shadow-md transition">
+
+                      {/* HEADER */}
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          {title}
+                        </CardTitle>
+                      </CardHeader>
+
+                      <CardContent>
+
+                        {/* META */}
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          {inst && <span>{inst}</span>}
+
+                          <Badge variant="secondary">
+                            {e.status}
+                          </Badge>
+
+                          {e.createdAt && (
+                              <span>
+                Enrolled {new Date(e.createdAt).toLocaleDateString()}
+              </span>
+                          )}
+                        </div>
+
+                        {/* ACTIONS */}
+                        <div className="mt-4 flex items-center justify-between">
+
+                          {/* GO TO COURSE */}
+                          <Button
+                              size="sm"
+                              onClick={() =>
+                                  window.location.href = `/courses/${courseId}`
+                              }
+                          >
+                            Go to course
+                          </Button>
+
+                          {/* CANCEL */}
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={cancel.isPending}
+                              onClick={() => cancel.mutate(courseId)}
+                          >
+                            Cancel
+                          </Button>
+
+                        </div>
+
+                      </CardContent>
+                    </Card>
+                );
+              })}
+            </div>
           </div>
         }
       </div>

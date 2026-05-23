@@ -3,8 +3,7 @@ package com.ly.lmsbackend.dto;
 public record CourseReviewResponseDTO(
         Long reviewId,
         String reviewText,
-        Double rating,
+        Integer rating,
         String username,
         String courseTitle
-) {
-}
+) {}

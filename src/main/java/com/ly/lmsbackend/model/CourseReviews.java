@@ -26,7 +26,7 @@ public class CourseReviews {
     private String reviewText;
 
     @Column(nullable = false)
-    private Double rating;
+    private Integer rating;
 
     @CreationTimestamp
     private Timestamp createdAt;

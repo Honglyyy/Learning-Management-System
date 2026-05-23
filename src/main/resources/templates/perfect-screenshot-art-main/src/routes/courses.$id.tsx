@@ -3,7 +3,7 @@ import {
   useNavigate,
   useParams,
 } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -15,6 +15,12 @@ import { ApiAlert } from "@/components/ApiAlert";
 import { Clock, User, Star, PlayCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/courses/$id")({
   component: CourseDetail,
@@ -28,6 +34,31 @@ function CourseDetail() {
   const [checkoutError, setCheckoutError] = useState<unknown>(null);
   const [activeLesson, setActiveLesson] = useState<any>(null);
 
+  const [reviewText, setReviewText] = useState("");
+  const [rating, setRating] = useState(5);
+
+  const qc = useQueryClient();
+
+  const submitReview = useMutation({
+    mutationFn: async () =>
+        api(`/api/courses/${id}/review`, {
+          method: "POST",
+          body: {
+            rating,
+            reviewText
+          },
+          auth: true
+        }),
+
+    onSuccess: () => {
+      toast.success("Review submitted");
+      setReviewText("");
+      qc.invalidateQueries({ queryKey: ["reviews", id] });
+    },
+
+    onError: () => toast.error("Failed to submit review"),
+  });
+
   // COURSE
   const course = useQuery<any>({
     queryKey: ["course", id],
@@ -39,6 +70,13 @@ function CourseDetail() {
     queryKey: ["my-enrollments"],
     queryFn: () => api("/api/enrollments/me", { auth: true }).catch(() => []),
     enabled: isAuthenticated,
+  });
+
+
+  const reviews = useQuery({
+    queryKey: ["reviews", id],
+    enabled: !!id,
+    queryFn: () => api(`/api/courses/${id}/reviews`, { auth: true }),
   });
 
   // FIXED ENROLLMENT CHECK
@@ -101,6 +139,7 @@ function CourseDetail() {
 
   const cats = c.categories || [];
 
+  // @ts-ignore
   return (
       <div className="min-h-screen bg-background">
         <SiteHeader />
@@ -161,65 +200,69 @@ function CourseDetail() {
             </h2>
 
             {c.sections?.length > 0 ? (
-                <div className="space-y-4">
+                <Accordion type="multiple" className="space-y-3">
 
                   {c.sections.map((section: any) => (
-                      <div
+                      <AccordionItem
                           key={section.sectionId}
-                          className="rounded-lg border bg-card"
+                          value={`section-${section.sectionId}`}
+                          className="border rounded-lg bg-card"
                       >
-                        {/* Section header */}
-                        <div className="border-b p-4 flex justify-between">
-                          <div>
-                            <h3 className="font-semibold">
-                              {section.title}
-                            </h3>
-                            <p className="text-xs text-muted-foreground">
-                              {section.duration}
-                            </p>
+
+                        {/* SECTION HEADER */}
+                        <AccordionTrigger className="px-4 py-3">
+                          <div className="flex justify-between w-full pr-4">
+                            <div className="text-left">
+                              <p className="font-semibold">{section.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {section.duration}
+                              </p>
+                            </div>
+
+                            <Badge variant="secondary">
+                              {section.lessonCount} lessons
+                            </Badge>
                           </div>
+                        </AccordionTrigger>
 
-                          <Badge variant="secondary">
-                            {section.lessonCount} lessons
-                          </Badge>
-                        </div>
+                        {/* LESSONS */}
+                        <AccordionContent className="px-4 pb-4">
+                          <div className="divide-y">
 
-                        {/* Lessons */}
-                        <div className="divide-y">
+                            {section.lessons?.map((lesson: any) => (
+                                <div
+                                    key={lesson.lessonId}
+                                    className="flex items-center justify-between py-3"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <PlayCircle className="h-4 w-4 text-primary" />
+                                    <span className="text-sm">
+                    {lesson.title}
+                  </span>
+                                  </div>
 
-                          {section.lessons?.map((lesson: any) => (
-                              <div
-                                  key={lesson.lessonId}
-                                  className="p-4 flex items-center justify-between"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <PlayCircle className="h-5 w-5 text-primary" />
-                                  <span className="text-sm font-medium">
-                            {lesson.title}
-                          </span>
+                                  {isEnrolled ? (
+                                      <Button
+                                          size="sm"
+                                          onClick={() => setActiveLesson(lesson)}
+                                      >
+                                        Play
+                                      </Button>
+                                  ) : (
+                                      <Button size="sm" disabled>
+                                        Enroll to watch
+                                      </Button>
+                                  )}
                                 </div>
+                            ))}
 
-                                {/* PLAY BUTTON LOGIC */}
-                                {isEnrolled ? (
-                                    <Button
-                                        size="sm"
-                                        onClick={() => setActiveLesson(lesson)}
-                                    >
-                                      Play
-                                    </Button>
-                                ) : (
-                                    <Button size="sm" disabled>
-                                      Enroll to watch
-                                    </Button>
-                                )}
-                              </div>
-                          ))}
+                          </div>
+                        </AccordionContent>
 
-                        </div>
-                      </div>
+                      </AccordionItem>
                   ))}
 
-                </div>
+                </Accordion>
             ) : (
                 <p className="text-sm text-muted-foreground">
                   No sections yet.
@@ -298,6 +341,91 @@ function CourseDetail() {
                 <p className="text-xs text-center text-muted-foreground">
                   You must enroll to access lessons
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* ================= REVIEWS ACCORDION ================= */}
+            <Card className="mt-4">
+              <CardContent className="p-4">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="reviews">
+
+                    <AccordionTrigger>
+                      ⭐ Reviews ({reviews.data?.length || 0})
+                    </AccordionTrigger>
+
+                    <AccordionContent>
+                      {reviews.isLoading ? (
+                          <p className="text-sm text-muted-foreground">
+                            Loading reviews...
+                          </p>
+                      ) : (reviews.data?.length ?? 0) > 0 ? (
+                          <div className="space-y-3">
+                            {reviews.data?.map((r: any) => (
+                                <div key={r.reviewId} className="rounded-md border p-3">
+
+                                  <div className="text-sm font-medium flex items-center gap-2">
+                                    ⭐ {r.rating}
+                                  </div>
+
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {r.reviewText}
+                                  </p>
+
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    by {r.username}
+                                  </p>
+
+                                </div>
+                            ))}
+                          </div>
+                      ) : (
+                          <p className="text-sm text-muted-foreground">
+                            No reviews yet.
+                          </p>
+                      )}
+                    </AccordionContent>
+                    {isEnrolled && (
+                        <Card className="mt-4">
+                          <CardContent className="p-4 space-y-3">
+
+                            <h3 className="font-semibold">Write a review</h3>
+
+                            {/* RATING */}
+                            <select
+                                value={rating}
+                                onChange={(e) => setRating(Number(e.target.value))}
+                                className="w-full rounded-md border p-2 text-sm"
+                            >
+                              {[5,4,3,2,1].map((r) => (
+                                  <option key={r} value={r}>
+                                    {r} Stars
+                                  </option>
+                              ))}
+                            </select>
+
+                            {/* COMMENT */}
+                            <textarea
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                placeholder="Write your feedback..."
+                                className="w-full rounded-md border p-2 text-sm"
+                            />
+
+                            {/* SUBMIT */}
+                            <Button
+                                className="w-full"
+                                disabled={submitReview.isPending}
+                                onClick={() => submitReview.mutate()}
+                            >
+                              Submit Review
+                            </Button>
+
+                          </CardContent>
+                        </Card>
+                    )}
+                  </AccordionItem>
+                </Accordion>
               </CardContent>
             </Card>
           </aside>

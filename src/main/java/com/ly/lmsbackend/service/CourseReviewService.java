@@ -9,6 +9,7 @@ import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.CourseReviewRepository;
 import com.ly.lmsbackend.repository.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,17 +30,17 @@ public class CourseReviewService {
         this.courseReviewRepository = courseReviewRepository;
     }
 
-    public CourseReviewResponseDTO addReview(CourseReviewCreateDTO dto,String email){
-        Users userEmail = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User is not found!!"));
-
-        Courses courseId = courseRepository.findById(dto.courseId())
-                .orElseThrow(() -> new RuntimeException("Course id " + dto.courseId() + " is not found!!"));
-
-        CourseReviews review = courseReviewMapper.toEntity(dto, userEmail, courseId);
-
-        return courseReviewMapper.toDto(courseReviewRepository.save(review));
-    }
+//    public CourseReviewResponseDTO addReview(CourseReviewCreateDTO dto,String email){
+//        Users userEmail = userRepository.findByEmail(email)
+//                .orElseThrow(() -> new RuntimeException("User is not found!!"));
+//
+//        Courses courseId = courseRepository.findById(dto.courseId())
+//                .orElseThrow(() -> new RuntimeException("Course id " + dto.courseId() + " is not found!!"));
+//
+//        CourseReviews review = courseReviewMapper.toEntity(dto, userEmail, courseId);
+//
+//        return courseReviewMapper.toDto(courseReviewRepository.save(review));
+//    }
 
     public List<CourseReviewResponseDTO> getAllReviews() {
         return courseReviewRepository.findAll().stream().map(cr->
@@ -52,5 +53,27 @@ public class CourseReviewService {
                 )
 
         ).toList();
+    }
+
+    public CourseReviewResponseDTO addReviewByCourse(
+            Long courseId,
+            CourseReviewCreateDTO dto,
+            String email
+    ) {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Courses course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        CourseReviews review = courseReviewMapper.toEntity(dto, user, course);
+
+        return courseReviewMapper.toDto(courseReviewRepository.save(review));
+    }
+    public List<CourseReviewResponseDTO> getByCourse(Long courseId) {
+        return courseReviewRepository.findByCourseCourseId(courseId)
+                .stream()
+                .map(courseReviewMapper::toDto)
+                .toList();
     }
 }

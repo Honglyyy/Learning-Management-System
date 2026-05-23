@@ -32,17 +32,17 @@ function AdminPage() {
   const [section, setSection] = useState<Section>("overview");
   const items: { key: Section; label: string; icon: any }[] = [
     { key: "overview", label: "Overview", icon: LayoutDashboard },
-    { key: "courses", label: "Courses", icon: BookOpen },
+    { key: "users", label: "Users", icon: Users },
     { key: "categories", label: "Categories", icon: FolderTree },
+    { key: "enrollments", label: "Enrollments", icon: Users },
+    { key: "courses", label: "Courses", icon: BookOpen },
     { key: "sections", label: "Sections", icon: Layers },
     { key: "lessons", label: "Lessons", icon: FileVideo },
     { key: "quizzes", label: "Quizzes", icon: ListChecks },
     { key: "questions", label: "Questions", icon: HelpCircle },
     { key: "answers", label: "Answers", icon: CheckSquare },
     { key: "payments", label: "Payments", icon: CreditCard },
-    { key: "enrollments", label: "Enrollments", icon: Users },
-    { key: "users", label: "Users", icon: Users },
-    { key: "admins", label: "Admin users", icon: Shield },
+    // { key: "admins", label: "Admin users", icon: Shield },
   ];
 
   return (
@@ -83,7 +83,7 @@ function AdminPage() {
           {section === "payments" && <AdminPayments />}
           {section === "enrollments" && <AdminEnrollments />}
           {section === "users" && <AdminUsers />}
-          {section === "admins" && <CreateAdmin />}
+          {/*{section === "admins" && <CreateAdmin />}*/}
         </main>
       </div>
     </div>

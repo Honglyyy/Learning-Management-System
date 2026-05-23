@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 "/send-reset-otp","/send-reset-otp/","/send-reset-otp/**",
                                 "/reset-password","/reset-password/","/reset-password/**"
                         ).permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

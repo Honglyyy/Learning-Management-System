@@ -140,4 +140,27 @@ public class UserService {
                 .map(userMapper::dto)
                 .toList();
     }
+
+    public UserResponseDTO updateUserRole(
+            Long id,
+            Roles role
+    ) {
+        Users user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        user.setRole(role);
+
+        userRepository.save(user);
+
+        return userMapper.dto(user);
+    }
+
+    public void deleteUser(Long id) {
+        Users user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        userRepository.delete(user);
+    }
 }

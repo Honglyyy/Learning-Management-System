@@ -1,9 +1,6 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.RegisterRequest;
-import com.ly.lmsbackend.dto.ResetPasswordRequest;
-import com.ly.lmsbackend.dto.UserResponseDTO;
-import com.ly.lmsbackend.dto.VerifyUserOtp;
+import com.ly.lmsbackend.dto.*;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.service.EmailService;
@@ -97,5 +94,24 @@ public class UserController {
         return "Hello World";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/api/users/{id}/role")
+    public ResponseEntity<UserResponseDTO> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody UpdateRoleRequest request
+    ) {
+        return ResponseEntity.ok(
+                userService.updateUserRole(id, request.role())
+        );
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/api/users/{id}")
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long id
+    ) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 
 }

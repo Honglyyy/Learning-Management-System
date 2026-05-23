@@ -82,7 +82,7 @@ function AdminPage() {
           {section === "answers" && <AnswerPanel />}
           {section === "payments" && <AdminPayments />}
           {section === "enrollments" && <AdminEnrollments />}
-          {/*{section === "users" && <AdminUsers />}*/}
+          {section === "users" && <AdminUsers />}
           {section === "admins" && <CreateAdmin />}
         </main>
       </div>
@@ -206,7 +206,38 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
   // console.table(catOptions)
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { title: "", description: "", price: 0, overallDuration: "", coverDir: "", instructor: 1, categoryId: [] }); setError(null); } }}>
+    <Dialog open={open}
+        onOpenChange={(o) => { setOpen(o); if (o) { setForm(
+          initial
+              ? {
+                ...initial,
+
+                categoryId:
+                    initial.categories?.map(
+                        (cat: any) => {
+                          const found = categories?.find(
+                              (c) =>
+                                  c.category === cat
+                          );
+
+                          return found?.categoryId;
+                        }
+                    ).filter(Boolean) || [],
+              }
+              : {
+                title: "",
+                description: "",
+                price: 0,
+                overallDuration: "",
+                coverDir: "",
+                instructor: 1,
+                categoryId: [],
+              }
+          );
+          }
+        }
+      }
+    >
       <DialogTrigger asChild>{mode === "create" ? <Button size="sm"><Plus className="mr-1 h-4 w-4" />New course</Button> : <Button size="icon" variant="ghost"><LayoutDashboard className="h-4 w-4" /></Button>}</DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>{mode === "create" ? "New course" : "Edit course"}</DialogTitle></DialogHeader>
@@ -218,7 +249,8 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
             <div className="space-y-1"><Label>Price</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
             <div className="space-y-1"><Label>Duration</Label><Input value={form.overallDuration} onChange={(e) => setForm({ ...form, overallDuration: e.target.value })} /></div>
           </div>
-          <div className="space-y-1"><Label>Instructor ID</Label><Input type="number" value={form.instructor || ""} onChange={(e) => setForm({ ...form, instructor: parseInt(e.target.value) || null })} /></div>
+          <h1>cateId{form.categoryId}</h1>
+          <div className="space-y-1"><Label>Instructor ID</Label><Input type="number" value={form.instructorId || ""} onChange={(e) => setForm({ ...form, instructor: parseInt(e.target.value) || null })} /></div>
           <div className="space-y-1"><Label>Categories</Label>{catsLoading ? <Skeleton className="h-10" /> : <MultiSelect options={catOptions} selected={form.categoryId||[]} onChange={(ids) => setForm({ ...form, categoryId: ids })} placeholder="Select categories..." />}</div>
           <div className="space-y-1">
             <Label>Cover</Label>
@@ -735,5 +767,439 @@ function CreateAdmin() {
         <Button onClick={() => m.mutate()} disabled={m.isPending}>{m.isPending ? "Creating..." : "Create admin"}</Button>
       </CardContent></Card>
     </div>
+  );
+}
+function AdminUsers() {
+  const qc = useQueryClient();
+
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+
+  const [open, setOpen] = useState(false);
+
+  const emptyForm = {
+    email: "",
+    username: "",
+    password: "",
+    role: "USER",
+  };
+
+  const [form, setForm] = useState<any>(emptyForm);
+
+  const [editing, setEditing] =
+      useState<any>(null);
+
+  const USER_ROLES = [
+    "USER",
+    "INSTRUCTOR",
+    "ADMIN",
+  ];
+
+  const list = useQuery<any[]>({
+    queryKey: ["admin-users"],
+    queryFn: () => api("/api/users"),
+  });
+
+  const create = useMutation({
+    mutationFn: () =>
+        api("/admin/register", {
+          method: "POST",
+          body: form,
+        }),
+
+    onSuccess: () => {
+      toast.success("User created");
+
+      setOpen(false);
+
+      setForm(emptyForm);
+
+      qc.invalidateQueries({
+        queryKey: ["admin-users"],
+      });
+    },
+
+    onError: (e: any) => {
+      toast.error(e.message);
+    },
+  });
+
+  const update = useMutation({
+    mutationFn: () =>
+        api(`/api/users/${editing.userId}`, {
+          method: "PUT",
+          body: form,
+        }),
+
+    onSuccess: () => {
+      toast.success("User updated");
+
+      setOpen(false);
+
+      setEditing(null);
+
+      setForm(emptyForm);
+
+      qc.invalidateQueries({
+        queryKey: ["admin-users"],
+      });
+    },
+
+    onError: (e: any) => {
+      toast.error(e.message);
+    },
+  });
+
+  const updateRole = useMutation({
+    mutationFn: ({
+                   id,
+                   role,
+                 }: {
+      id: number;
+      role: string;
+    }) =>
+        api(`/api/users/${id}/role`, {
+          method: "PATCH",
+          body: { role },
+        }),
+
+    onSuccess: () => {
+      toast.success("Role updated");
+
+      qc.invalidateQueries({
+        queryKey: ["admin-users"],
+      });
+    },
+
+    onError: (e: any) => {
+      toast.error(e.message);
+    },
+  });
+
+  const del = useMutation({
+    mutationFn: (id: number) =>
+        api(`/api/users/${id}`, {
+          method: "DELETE",
+        }),
+
+    onSuccess: () => {
+      toast.success("User deleted");
+
+      qc.invalidateQueries({
+        queryKey: ["admin-users"],
+      });
+    },
+
+    onError: (e: any) => {
+      toast.error(e.message);
+    },
+  });
+
+  const filteredUsers = [...(list.data || [])]
+      .filter((u) => {
+        const text =
+            `${u.username} ${u.email}`
+                .toLowerCase();
+
+        return text.includes(
+            search.toLowerCase()
+        );
+      })
+
+      .sort((a, b) => {
+        if (sortBy === "username") {
+          return a.username.localeCompare(
+              b.username
+          );
+        }
+
+        if (sortBy === "email") {
+          return a.email.localeCompare(
+              b.email
+          );
+        }
+
+        return a.userId - b.userId;
+      });
+
+  return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">
+            User Management
+          </h2>
+
+          <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setForm(emptyForm);
+                setOpen(true);
+              }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            New User
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Input
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) =>
+                  setSearch(e.target.value)
+              }
+              className="max-w-sm"
+          />
+
+          <Select
+              value={sortBy}
+              onValueChange={setSortBy}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="id">
+                ID
+              </SelectItem>
+
+              <SelectItem value="username">
+                Username
+              </SelectItem>
+
+              <SelectItem value="email">
+                Email
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <ApiAlert error={list.error} />
+
+        {list.isLoading ? (
+            <Skeleton className="h-40" />
+        ) : (
+            <div className="rounded-md border border-border bg-card overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Username</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="text-right">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {filteredUsers.map((u: any) => (
+                      <TableRow key={u.userId}>
+                        <TableCell>
+                          {u.userId}
+                        </TableCell>
+
+                        <TableCell>
+                          {u.username}
+                        </TableCell>
+
+                        <TableCell>
+                          {u.email}
+                        </TableCell>
+
+                        <TableCell>
+                          <Select
+                              value={u.role}
+                              onValueChange={(v) =>
+                                  updateRole.mutate({
+                                    id: u.userId,
+                                    role: v,
+                                  })
+                              }
+                          >
+                            <SelectTrigger className="w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                              {USER_ROLES.map(
+                                  (role) => (
+                                      <SelectItem
+                                          key={role}
+                                          value={role}
+                                      >
+                                        {role}
+                                      </SelectItem>
+                                  )
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell className="space-x-1 text-right">
+                          <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditing(u);
+
+                                setForm({
+                                  email: u.email,
+                                  username:
+                                  u.username,
+                                  password: "",
+                                  role: u.role,
+                                });
+
+                                setOpen(true);
+                              }}
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => {
+                                if (
+                                    confirm(
+                                        "Delete user?"
+                                    )
+                                ) {
+                                  del.mutate(
+                                      u.userId
+                                  );
+                                }
+                              }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+        )}
+
+        <Dialog
+            open={open}
+            onOpenChange={setOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editing
+                    ? "Edit User"
+                    : "Create User"}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Email</Label>
+
+                <Input
+                    value={form.email}
+                    onChange={(e) =>
+                        setForm({
+                          ...form,
+                          email:
+                          e.target.value,
+                        })
+                    }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Username</Label>
+
+                <Input
+                    value={form.username}
+                    onChange={(e) =>
+                        setForm({
+                          ...form,
+                          username:
+                          e.target.value,
+                        })
+                    }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>
+                  Password
+                </Label>
+
+                <Input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) =>
+                        setForm({
+                          ...form,
+                          password:
+                          e.target.value,
+                        })
+                    }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Role</Label>
+
+                <Select
+                    value={form.role}
+                    onValueChange={(v) =>
+                        setForm({
+                          ...form,
+                          role: v,
+                        })
+                    }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {USER_ROLES.map(
+                        (role) => (
+                            <SelectItem
+                                key={role}
+                                value={role}
+                            >
+                              {role}
+                            </SelectItem>
+                        )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                  onClick={() => {
+                    if (editing) {
+                      update.mutate();
+                    } else {
+                      create.mutate();
+                    }
+                  }}
+                  disabled={
+                      create.isPending ||
+                      update.isPending
+                  }
+              >
+                {editing
+                    ? "Update"
+                    : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
   );
 }

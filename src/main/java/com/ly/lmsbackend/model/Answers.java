@@ -48,4 +48,7 @@ public class Answers {
     @LastModifiedDate
     private Timestamp updatedAt;
 
+    @ManyToOne
+    @JoinColumn(name = "instructor_id")
+    private Users instructor;
 }

@@ -1,11 +1,13 @@
 package com.ly.lmsbackend.controller;
 
+import com.ly.lmsbackend.dto.CourseResponseDTO;
 import com.ly.lmsbackend.dto.SectionCreateDTO;
 import com.ly.lmsbackend.dto.SectionResponseDTO;
 import com.ly.lmsbackend.service.SectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,4 +46,47 @@ public class SectionController {
         return new ResponseEntity<>(sectionService.updateSection(id,dto),HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @GetMapping("/api/sections/instructor/me")
+    public ResponseEntity<List<SectionResponseDTO>> getMySections(Authentication authentication) {
+        return ResponseEntity.ok(sectionService.getSectionByInstructor(authentication.getName()));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PostMapping("/api/sections/instructor/me")
+    public ResponseEntity<SectionResponseDTO> createMySection(
+            @RequestBody SectionCreateDTO dto,
+            Authentication authentication
+    ) {
+        return new ResponseEntity<>(
+                sectionService.addSectionByInstructor(dto, authentication.getName()),
+                HttpStatus.CREATED
+        );
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @DeleteMapping("/api/sections/instructor/me/{id}")
+    public void deleteMySection(
+            @PathVariable Long id,
+            Authentication authentication
+    ){
+        sectionService.deleteMySection(id, authentication.getName());
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PutMapping("/api/sections/instructor/me/{id}")
+    public ResponseEntity<SectionResponseDTO> updateMySection(
+            @PathVariable Long id,
+            @RequestBody SectionCreateDTO dto,
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                sectionService.updateMySection(
+                        id,
+                        dto,
+                        authentication.getName()
+                )
+        );
+    }
 }

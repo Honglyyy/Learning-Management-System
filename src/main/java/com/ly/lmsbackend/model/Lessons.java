@@ -55,4 +55,8 @@ public class Lessons {
 
     @OneToOne(mappedBy = "lesson",cascade = CascadeType.ALL, orphanRemoval = true)
     private Quizzes quiz;
+
+    @ManyToOne
+    @JoinColumn(name = "instructor_id")
+    private Users instructor;
 }

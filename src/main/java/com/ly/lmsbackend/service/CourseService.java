@@ -160,4 +160,39 @@ public class CourseService {
                 reviews
         );
     }
+
+    public void deleteMyCourse(Long id, String instructorEmail) {
+        Courses course = courseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        if(!course.getInstructor().getEmail().equals(instructorEmail)){
+            throw new RuntimeException("Unauthorized");
+        }
+
+        courseRepository.delete(course);
+    }
+
+    public CourseResponseDTO updateMyCourse(
+            Long id,
+            CourseCreateDTO dto,
+            String instructorEmail){
+        Courses course = courseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        if (!course.getInstructor().getEmail().equals(instructorEmail)){
+            throw new RuntimeException("Unauthorized");
+        }
+
+        List<Categories> categories =
+                categoryRepository.findAllById(dto.categoryId());
+
+        course.setTitle(dto.title());
+        course.setDescription(dto.description());
+        course.setPrice(dto.price());
+        course.setCategories(categories);
+
+        Courses updated = courseRepository.save(course);
+
+        return courseMapper.toDTO(updated);
+    }
 }

@@ -10,8 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-//TODO
-//Forgot fields of duration and dir
 @Component
 public class CourseMapper {
 

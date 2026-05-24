@@ -36,37 +36,29 @@ export function SiteHeader() {
             <Link to="/admin" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
           )}
         </nav>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="API settings"><Settings className="h-4 w-4" /></Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Backend API URL</DialogTitle></DialogHeader>
-              <div className="space-y-2">
-                <Label htmlFor="api">Base URL</Label>
-                <Input id="api" value={apiBase} onChange={(e) => setBase(e.target.value)} placeholder="http://localhost:8080" />
-                <p className="text-xs text-muted-foreground">Stored in this browser only.</p>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => { setApiBase(apiBase); setOpen(false); location.reload(); }}>Save & reload</Button>
-              </DialogFooter>
+              {isAuthenticated ? (
+                  <>
+                    <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span>
+                    <Button variant="outline" size="sm" onClick={() => { logout(); nav({ to: "/login" }); }}>Sign out</Button>
+                  </>
+              ) : (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>Sign in</Button>
+                    <Button size="sm" onClick={() => nav({ to: "/register" })}>Get started</Button>
+                  </>
+              )}
+              {isAuthenticated && role && (
+                  <Button variant="ghost" size="sm" className="hidden md:inline-flex" onClick={() => nav({ to: roleHome(role) })}>Dashboard</Button>
+              )}
             </DialogContent>
           </Dialog>
-          {isAuthenticated ? (
-            <>
-              <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span>
-              <Button variant="outline" size="sm" onClick={() => { logout(); nav({ to: "/login" }); }}>Sign out</Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>Sign in</Button>
-              <Button size="sm" onClick={() => nav({ to: "/register" })}>Get started</Button>
-            </>
-          )}
-          {isAuthenticated && role && (
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex" onClick={() => nav({ to: roleHome(role) })}>Dashboard</Button>
-          )}
         </div>
       </div>
     </header>

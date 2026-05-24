@@ -4,6 +4,7 @@ import com.ly.lmsbackend.dto.*;
 import com.ly.lmsbackend.mapper.SectionMapper;
 import com.ly.lmsbackend.model.*;
 import com.ly.lmsbackend.repository.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,13 +17,15 @@ public class SectionService {
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
     private final QuizRepository quizRepository;
+    private final UserRepository userRepository;
 
-    public SectionService(SectionRepository sectionRepository, SectionMapper sectionMapper, CourseRepository courseRepository, CategoryRepository categoryRepository, LessonRepository lessonRepository, QuizRepository quizRepository) {
+    public SectionService(SectionRepository sectionRepository, SectionMapper sectionMapper, CourseRepository courseRepository, CategoryRepository categoryRepository, LessonRepository lessonRepository, QuizRepository quizRepository, UserRepository userRepository) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
         this.sectionMapper = sectionMapper;
         this.lessonRepository = lessonRepository;
         this.quizRepository = quizRepository;
+        this.userRepository = userRepository;
     }
 
     public List<SectionResponseDTO> getSections(){
@@ -62,26 +65,96 @@ public class SectionService {
         sectionRepository.deleteById(id);
     }
 
+    public List<SectionResponseDTO> getSectionByInstructor(String instructorEmail){
+        return sectionRepository.findByInstructor_Email(instructorEmail)
+                .stream().map(sectionMapper::toDto).toList();
+    }
 
+    public SectionResponseDTO addSectionByInstructor(
+            SectionCreateDTO dto,
+            String instructorEmail
+    ) {
 
-//    public SectionDetailDTO getSection(Long id){
-//        Sections section = sectionRepository.findById(id)
-//                .orElseThrow(() -> new RuntimeException("Section id " + id + " not found"));
-//
-//        List<LessonDetailDTO> lessonDetailDTOS = lessonRepository.findBySections_SectionId(id)
-//                .stream()
-//                .map(lesson -> new LessonDetailDTO(
-//                        lesson.getLessonId(),
-//                        lesson.getTitle(),
-//                        lesson.getVideoDir()
-//                )).toList();
-//
-//        return new SectionDetailDTO(
-//                section.getSectionId(),
-//                section.getTitle(),
-//                section.getDuration(),
-//                (long) lessonDetailDTOS.size(),
-//                lessonDetailDTOS
-//        );
-//    }
+        Courses course = courseRepository
+                .findById(dto.courseId())
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Course not found"
+                        )
+                );
+
+        if (!course.getInstructor()
+                .getEmail()
+                .equals(instructorEmail)) {
+
+            throw new AccessDeniedException(
+                    "Unauthorized"
+            );
+        }
+
+        Sections section = sectionMapper
+                .toEntity(dto, course);
+
+        section.setInstructor(
+                course.getInstructor()
+        );
+
+        return sectionMapper.toDto(
+                sectionRepository.save(section)
+        );
+    }
+
+    public void deleteMySection(
+            Long id,
+            String instructorEmail
+    ) {
+
+        Sections section = sectionRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Section not found"
+                        )
+                );
+
+        if (!section.getInstructor()
+                .getEmail()
+                .equals(instructorEmail)) {
+
+            throw new AccessDeniedException(
+                    "Unauthorized"
+            );
+        }
+
+        sectionRepository.delete(section);
+    }
+
+    public SectionResponseDTO updateMySection(
+            Long id,
+            SectionCreateDTO dto,
+            String instructorEmail
+    ) {
+
+        Sections section = sectionRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Section not found")
+                );
+
+        // SECURITY CHECK
+        if (!section.getInstructor()
+                .getEmail()
+                .equals(instructorEmail)) {
+
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        // UPDATE FIELDS
+        section.setTitle(dto.title());
+        section.setDuration(dto.duration());
+
+        Sections updated = sectionRepository.save(section);
+
+        return sectionMapper.toDto(updated);
+    }
 }

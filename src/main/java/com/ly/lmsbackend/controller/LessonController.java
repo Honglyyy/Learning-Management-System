@@ -7,6 +7,7 @@ import com.ly.lmsbackend.service.LessonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,5 +52,48 @@ public class LessonController {
     public ResponseEntity<String> deleteLesson(@PathVariable Long id){
         lessonService.deleteLesson(id);
         return new ResponseEntity<>("Lesson id " + id + " has now deleted!!", HttpStatus.OK);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @GetMapping("/api/lessons/instructor/me")
+    public ResponseEntity<List<LessonResponseDTO>> getMyLessonsByInstructor(Authentication authentication) {
+        return ResponseEntity.ok(lessonService.getLessonByInstructor(authentication.getName()));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PostMapping("/api/lessons/instructor/me")
+    public ResponseEntity<LessonResponseDTO> createMyLesson(
+            @RequestBody LessonCreateDTO dto,
+            Authentication authentication
+    ) {
+        return new ResponseEntity<>(
+                lessonService.addLessonByInstructor(dto, authentication.getName()),
+                HttpStatus.CREATED
+        );
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @DeleteMapping("/api/lessons/instructor/me/{id}")
+    public void deleteMyLesson(
+            @PathVariable Long id,
+            Authentication authentication
+    ){
+        lessonService.deleteMyLesson(id, authentication.getName());
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PutMapping("/api/lessons/instructor/me/{id}")
+    public ResponseEntity<LessonResponseDTO> updateMyLesson(
+            @PathVariable Long id,
+            @RequestBody LessonCreateDTO dto,
+            Authentication authentication
+    ){
+        return ResponseEntity.ok(
+                lessonService.updateMyLesson(
+                        id,
+                        dto,
+                        authentication.getName()
+                )
+        );
     }
 }

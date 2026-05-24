@@ -54,6 +54,31 @@ public class CourseController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @DeleteMapping("/api/courses/instructor/me/{id}")
+    public void deleteMyCourse(
+            @PathVariable Long id,
+            Authentication authentication
+    ){
+        courseService.deleteMyCourse(id,authentication.getName());
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PutMapping("/api/courses/instructor/me/{id}")
+    public ResponseEntity<CourseResponseDTO> updateMyCourse(
+            @PathVariable Long id,
+            @RequestBody CourseCreateDTO dto,
+            Authentication authentication
+    ){
+        return ResponseEntity.ok(
+                courseService.updateMyCourse(
+                        id,
+                        dto,
+                        authentication.getName()
+                )
+        );
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/courses/{id}")
     public ResponseEntity<String> deleteCourse(@PathVariable Long id){
         courseService.deleteCourse(id);

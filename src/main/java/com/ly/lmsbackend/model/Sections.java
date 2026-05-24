@@ -54,5 +54,9 @@ public class Sections {
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Lessons> lessons;
+
+    @ManyToOne
+    @JoinColumn(name = "instructor_id")
+    private Users instructor;
 }
 

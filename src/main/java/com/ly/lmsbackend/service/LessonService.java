@@ -2,11 +2,13 @@ package com.ly.lmsbackend.service;
 
 import com.ly.lmsbackend.dto.*;
 import com.ly.lmsbackend.mapper.LessonMapper;
+import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Lessons;
 import com.ly.lmsbackend.model.Sections;
 import com.ly.lmsbackend.repository.LessonRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
 import com.ly.lmsbackend.repository.SectionRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -100,5 +102,98 @@ public class LessonService {
                 lessons.getVideoDir(),
                 quizzes
         );
+    }
+
+    public List<LessonResponseDTO> getLessonByInstructor(String instructorEmail) {
+        return lessonRepository.findByInstructor_Email(instructorEmail).stream().map(lessonMapper::toDto).toList();
+    }
+
+    public LessonResponseDTO addLessonByInstructor(
+            LessonCreateDTO dto,
+            String instructorEmail
+    ) {
+
+        Sections section = sectionRepository
+                .findById(dto.sectionId())
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Section not found"
+                        )
+                );
+
+        if (!section.getInstructor()
+                .getEmail()
+                .equals(instructorEmail)) {
+
+            throw new AccessDeniedException(
+                    "Unauthorized"
+            );
+        }
+
+        Lessons lessons = lessonMapper
+                .toEntity(dto, section);
+
+        lessons.setInstructor(
+                section.getInstructor()
+        );
+
+        return lessonMapper.toDto(
+                lessonRepository.save(lessons)
+        );
+    }
+
+    public void deleteMyLesson(
+            Long id,
+            String instructorEmail
+    ) {
+
+        Lessons lesson = lessonRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Lesson not found"
+                        )
+                );
+
+        if (!lesson.getInstructor()
+                .getEmail()
+                .equals(instructorEmail)) {
+
+            throw new AccessDeniedException(
+                    "Unauthorized"
+            );
+        }
+
+        lessonRepository.delete(lesson);
+    }
+
+
+    public LessonResponseDTO updateMyLesson(
+            Long id,
+            LessonCreateDTO dto,
+            String instructorEmail
+    ) {
+
+        Lessons lesson = lessonRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Lesson not found")
+                );
+
+        // SECURITY CHECK
+        if (!lesson.getInstructor()
+                .getEmail()
+                .equals(instructorEmail)) {
+
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        // UPDATE FIELDS
+        lesson.setTitle(dto.title());
+        lesson.setVideoDir(dto.videoDir());
+
+        Lessons updated = lessonRepository.save(lesson);
+
+        return lessonMapper.toDto(updated);
     }
 }

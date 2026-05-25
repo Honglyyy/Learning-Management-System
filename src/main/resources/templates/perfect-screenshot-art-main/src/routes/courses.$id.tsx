@@ -29,7 +29,7 @@ export const Route = createFileRoute("/courses/$id")({
 function CourseDetail() {
   const { id } = useParams({ from: "/courses/$id" });
   const nav = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role, email, logout } = useAuth();
 
   const [checkoutError, setCheckoutError] = useState<unknown>(null);
   const [activeLesson, setActiveLesson] = useState<any>(null);
@@ -124,7 +124,12 @@ function CourseDetail() {
         <div className="min-h-screen bg-background">
           <SiteHeader />
           <div className="container mx-auto px-4 py-10">
-            <ApiAlert error={course.error || "Course not found"} />
+            {/*<ApiAlert error={course.error || "Course not found"} />*/}
+            <h1 className={"text-center text-xl"}>Please log in to continue</h1>
+            <div className={"flex gap-4 justify-center mt-3"}>
+              <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>Sign in</Button>
+              <Button size="sm" onClick={() => nav({ to: "/register" })}>Get started</Button>
+            </div>
           </div>
         </div>
     );

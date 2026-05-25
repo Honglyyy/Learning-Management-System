@@ -913,7 +913,7 @@ function CourseCard({ c, onOpen }: { c: Course; onOpen: () => void }) {
           {isFree ? "Free" : `$${Number(c.price).toFixed(2)}`}
         </span>
           <span className="card-cta">
-          Enrol <ArrowRight size={13} className="card-arrow" />
+          Enroll <ArrowRight size={13} className="card-arrow" />
         </span>
         </div>
       </div>

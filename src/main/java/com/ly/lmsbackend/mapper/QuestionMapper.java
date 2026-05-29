@@ -13,6 +13,7 @@ public class QuestionMapper {
         return new QuestionResponseDTO(
                 question.getQuestionId(),
                 question.getQuestionText(),
+                question.getPoint(),
                 question.getQuiz().getQuizId()
         );
     }
@@ -24,6 +25,7 @@ public class QuestionMapper {
         Questions question = new Questions();
 
         question.setQuestionText(dto.questionText());
+        question.setPoint(dto.point());
         question.setQuiz(quiz);
 
         return question;

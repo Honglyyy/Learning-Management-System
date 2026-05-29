@@ -20,6 +20,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as MyPaymentsRouteImport } from './routes/my.payments'
 import { Route as MyEnrollmentsRouteImport } from './routes/my.enrollments'
 import { Route as CoursesIdRouteImport } from './routes/courses.$id'
+import { Route as LessonsLessonIdQuizRouteImport } from './routes/lessons.$lessonId.quiz'
 
 const VerifyOtpRoute = VerifyOtpRouteImport.update({
   id: '/verify-otp',
@@ -76,6 +77,11 @@ const CoursesIdRoute = CoursesIdRouteImport.update({
   path: '/courses/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LessonsLessonIdQuizRoute = LessonsLessonIdQuizRouteImport.update({
+  id: '/lessons/$lessonId/quiz',
+  path: '/lessons/$lessonId/quiz',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/my/payments': typeof MyPaymentsRoute
   '/admin/': typeof AdminIndexRoute
   '/instructor/': typeof InstructorIndexRoute
+  '/lessons/$lessonId/quiz': typeof LessonsLessonIdQuizRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/my/payments': typeof MyPaymentsRoute
   '/admin': typeof AdminIndexRoute
   '/instructor': typeof InstructorIndexRoute
+  '/lessons/$lessonId/quiz': typeof LessonsLessonIdQuizRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/my/payments': typeof MyPaymentsRoute
   '/admin/': typeof AdminIndexRoute
   '/instructor/': typeof InstructorIndexRoute
+  '/lessons/$lessonId/quiz': typeof LessonsLessonIdQuizRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/my/payments'
     | '/admin/'
     | '/instructor/'
+    | '/lessons/$lessonId/quiz'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/my/payments'
     | '/admin'
     | '/instructor'
+    | '/lessons/$lessonId/quiz'
   id:
     | '__root__'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/my/payments'
     | '/admin/'
     | '/instructor/'
+    | '/lessons/$lessonId/quiz'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   MyPaymentsRoute: typeof MyPaymentsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   InstructorIndexRoute: typeof InstructorIndexRoute
+  LessonsLessonIdQuizRoute: typeof LessonsLessonIdQuizRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lessons/$lessonId/quiz': {
+      id: '/lessons/$lessonId/quiz'
+      path: '/lessons/$lessonId/quiz'
+      fullPath: '/lessons/$lessonId/quiz'
+      preLoaderRoute: typeof LessonsLessonIdQuizRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyPaymentsRoute: MyPaymentsRoute,
   AdminIndexRoute: AdminIndexRoute,
   InstructorIndexRoute: InstructorIndexRoute,
+  LessonsLessonIdQuizRoute: LessonsLessonIdQuizRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

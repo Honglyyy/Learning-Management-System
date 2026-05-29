@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import {
     Dialog,
@@ -252,28 +253,586 @@ function CourseCard({
                 </div>
 
                 {/* ── Quiz / Question / Answer ──────────────────────────────────── */}
-                <div className="grid grid-cols-3 gap-2 border-t pt-3">
-                    <InstructorQuizDialog
-                        courseId={course.courseId}
-                        onSaved={() =>
-                            qc.invalidateQueries({ queryKey: ["instructor-quizzes"] })
-                        }
-                    />
-                    <InstructorQuestionDialog
-                        courseId={course.courseId}
-                        onSaved={() =>
-                            qc.invalidateQueries({ queryKey: ["instructor-questions"] })
-                        }
-                    />
-                    <InstructorAnswerDialog
-                        courseId={course.courseId}
-                        onSaved={() =>
-                            qc.invalidateQueries({ queryKey: ["instructor-answers"] })
-                        }
-                    />
-                </div>
+                <QuizContentManager courseId={course.courseId} />
             </CardContent>
         </Card>
+    );
+}
+
+function QuizContentManager({ courseId }: { courseId: number }) {
+    const qc = useQueryClient();
+
+    const { data: lessons } = useQuery<any[]>({
+        queryKey: ["instructor-lessons-all", courseId],
+        queryFn: () => api(`/api/lessons/instructor/me?courseId=${courseId}`),
+    });
+    const { data: quizzes } = useQuery<any[]>({
+        queryKey: ["instructor-quizzes", courseId],
+        queryFn: () => api("/api/quizzes"),
+    });
+    const { data: questions } = useQuery<any[]>({
+        queryKey: ["instructor-questions", courseId],
+        queryFn: () => api("/api/questions"),
+    });
+    const { data: answers } = useQuery<any[]>({
+        queryKey: ["instructor-answers", courseId],
+        queryFn: () => api("/api/answers"),
+    });
+
+    const lessonIds = new Set((lessons ?? []).map((lesson) => lesson.lessonId));
+    const courseQuizzes = (quizzes ?? []).filter((quiz) => lessonIds.has(quiz.lessonId));
+    const quizIds = new Set(courseQuizzes.map((quiz) => quiz.quizId));
+    const courseQuestions = (questions ?? []).filter((question) => quizIds.has(question.quizId));
+    const questionIds = new Set(courseQuestions.map((question) => question.questionId));
+    const courseAnswers = (answers ?? []).filter((answer) => questionIds.has(answer.questionId));
+
+    const invalidateQuizContent = () => {
+        qc.invalidateQueries({ queryKey: ["instructor-quizzes"] });
+        qc.invalidateQueries({ queryKey: ["instructor-questions"] });
+        qc.invalidateQueries({ queryKey: ["instructor-answers"] });
+    };
+
+    const deleteQuiz = useMutation({
+        mutationFn: (quizId: number) => api(`/api/quizzes/${quizId}`, { method: "DELETE" }),
+        onSuccess: () => {
+            toast.success("Quiz deleted");
+            invalidateQuizContent();
+        },
+        onError: () => toast.error("Failed to delete quiz"),
+    });
+    const deleteQuestion = useMutation({
+        mutationFn: (questionId: number) => api(`/api/questions/${questionId}`, { method: "DELETE" }),
+        onSuccess: () => {
+            toast.success("Question deleted");
+            invalidateQuizContent();
+        },
+        onError: () => toast.error("Failed to delete question"),
+    });
+    const deleteAnswer = useMutation({
+        mutationFn: (answerId: number) => api(`/api/answers/${answerId}`, { method: "DELETE" }),
+        onSuccess: () => {
+            toast.success("Answer deleted");
+            invalidateQuizContent();
+        },
+        onError: () => toast.error("Failed to delete answer"),
+    });
+
+    return (
+        <div className="border-t pt-3">
+            <Accordion type="single" collapsible>
+                <AccordionItem value="quiz-content" className="border-none">
+                    <AccordionTrigger className="py-2 text-sm font-semibold">
+                        Manage quizzes, questions, answers
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-4">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                            <QuizEditDialog
+                                mode="create"
+                                lessons={lessons ?? []}
+                                onSaved={invalidateQuizContent}
+                            />
+                            <QuestionEditDialog
+                                mode="create"
+                                quizzes={courseQuizzes}
+                                onSaved={invalidateQuizContent}
+                            />
+                            <AnswerEditDialog
+                                mode="create"
+                                questions={courseQuestions}
+                                onSaved={invalidateQuizContent}
+                            />
+                        </div>
+
+                        {courseQuizzes.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                                No quizzes yet. Create one for a lesson first.
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {courseQuizzes.map((quiz) => {
+                                    const quizQuestions = courseQuestions.filter(
+                                        (question) => question.quizId === quiz.quizId,
+                                    );
+
+                                    return (
+                                        <div key={quiz.quizId} className="rounded-lg border p-3">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div>
+                                                    <p className="text-sm font-semibold">{quiz.title}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {quiz.totalPoints} points ·{" "}
+                                                        {lessons?.find((lesson) => lesson.lessonId === quiz.lessonId)
+                                                            ?.title ?? "Lesson"}
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <QuizEditDialog
+                                                        mode="edit"
+                                                        initial={quiz}
+                                                        lessons={lessons ?? []}
+                                                        onSaved={invalidateQuizContent}
+                                                    />
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        className="h-7 w-7 text-destructive"
+                                                        onClick={() => {
+                                                            if (confirm("Delete this quiz?")) {
+                                                                deleteQuiz.mutate(quiz.quizId);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 space-y-2">
+                                                {quizQuestions.length === 0 ? (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        No questions yet.
+                                                    </p>
+                                                ) : (
+                                                    quizQuestions.map((question) => {
+                                                        const questionAnswers = courseAnswers.filter(
+                                                            (answer) => answer.questionId === question.questionId,
+                                                        );
+
+                                                        return (
+                                                            <div
+                                                                key={question.questionId}
+                                                                className="rounded-md bg-muted/40 p-2"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <div>
+                                                                        <p className="text-xs font-medium">
+                                                                            {question.questionText}
+                                                                        </p>
+                                                                        <p className="text-[11px] text-muted-foreground">
+                                                                            {question.point ?? "Auto"} points
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="flex gap-1">
+                                                                        <QuestionEditDialog
+                                                                            mode="edit"
+                                                                            initial={question}
+                                                                            quizzes={courseQuizzes}
+                                                                            onSaved={invalidateQuizContent}
+                                                                        />
+                                                                        <Button
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-7 w-7 text-destructive"
+                                                                            onClick={() => {
+                                                                                if (confirm("Delete this question?")) {
+                                                                                    deleteQuestion.mutate(question.questionId);
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mt-2 space-y-1">
+                                                                    {questionAnswers.length === 0 ? (
+                                                                        <p className="text-[11px] text-muted-foreground">
+                                                                            No answers yet.
+                                                                        </p>
+                                                                    ) : (
+                                                                        questionAnswers.map((answer) => (
+                                                                            <div
+                                                                                key={answer.answerId}
+                                                                                className="flex items-center justify-between gap-2 rounded border bg-background px-2 py-1"
+                                                                            >
+                                                                                <span className="text-[11px]">
+                                                                                    {answer.answerText}
+                                                                                    {answer.isCorrect && (
+                                                                                        <span className="ml-2 font-semibold text-green-700">
+                                                                                            Correct
+                                                                                        </span>
+                                                                                    )}
+                                                                                </span>
+                                                                                <div className="flex gap-1">
+                                                                                    <AnswerEditDialog
+                                                                                        mode="edit"
+                                                                                        initial={answer}
+                                                                                        questions={courseQuestions}
+                                                                                        onSaved={invalidateQuizContent}
+                                                                                    />
+                                                                                    <Button
+                                                                                        size="icon"
+                                                                                        variant="ghost"
+                                                                                        className="h-6 w-6 text-destructive"
+                                                                                        onClick={() => {
+                                                                                            if (confirm("Delete this answer?")) {
+                                                                                                deleteAnswer.mutate(answer.answerId);
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+        </div>
+    );
+}
+
+function QuizEditDialog({
+                            mode,
+                            initial,
+                            lessons,
+                            onSaved,
+                        }: {
+    mode: "create" | "edit";
+    initial?: any;
+    lessons: any[];
+    onSaved: () => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const [error, setError] = useState<any>(null);
+    const [form, setForm] = useState<any>(
+        initial ?? { title: "", totalPoints: 10, lessonId: "" },
+    );
+
+    const save = useMutation({
+        mutationFn: () => {
+            const body = {
+                title: form.title,
+                totalPoints: Number(form.totalPoints),
+                lessonId: Number(form.lessonId),
+            };
+            return api(mode === "create" ? "/api/quizzes" : `/api/quizzes/${initial.quizId}`, {
+                method: mode === "create" ? "POST" : "PUT",
+                body,
+            });
+        },
+        onSuccess: () => {
+            toast.success(mode === "create" ? "Quiz created" : "Quiz updated");
+            setOpen(false);
+            onSaved();
+        },
+        onError: (e) => setError(e),
+    });
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+                if (next) {
+                    setError(null);
+                    setForm(initial ?? { title: "", totalPoints: 10, lessonId: "" });
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                {mode === "create" ? (
+                    <Button size="sm" variant="outline" className="w-full">
+                        <ListChecks className="mr-1 h-3.5 w-3.5" />
+                        New quiz
+                    </Button>
+                ) : (
+                    <Button size="icon" variant="ghost" className="h-7 w-7">
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                )}
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{mode === "create" ? "Create Quiz" : "Edit Quiz"}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <ApiAlert error={error} />
+                    <div className="space-y-1">
+                        <Label>Title</Label>
+                        <Input
+                            value={form.title}
+                            onChange={(e) => setForm({ ...form, title: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label>Total Points</Label>
+                        <Input
+                            type="number"
+                            min={0}
+                            value={form.totalPoints}
+                            onChange={(e) => setForm({ ...form, totalPoints: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label>Lesson</Label>
+                        <Select
+                            value={String(form.lessonId)}
+                            onValueChange={(v) => setForm({ ...form, lessonId: parseInt(v) })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose lesson" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {lessons.map((lesson) => (
+                                    <SelectItem key={lesson.lessonId} value={String(lesson.lessonId)}>
+                                        {lesson.title}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                        Save
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function QuestionEditDialog({
+                                mode,
+                                initial,
+                                quizzes,
+                                onSaved,
+                            }: {
+    mode: "create" | "edit";
+    initial?: any;
+    quizzes: any[];
+    onSaved: () => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const [error, setError] = useState<any>(null);
+    const [form, setForm] = useState<any>(
+        initial ?? { questionText: "", point: "", quizId: "" },
+    );
+
+    const save = useMutation({
+        mutationFn: () => {
+            const body = {
+                questionText: form.questionText,
+                point: form.point === "" ? null : Number(form.point),
+                quizId: Number(form.quizId),
+            };
+            return api(
+                mode === "create" ? "/api/questions" : `/api/questions/${initial.questionId}`,
+                {
+                    method: mode === "create" ? "POST" : "PUT",
+                    body,
+                },
+            );
+        },
+        onSuccess: () => {
+            toast.success(mode === "create" ? "Question created" : "Question updated");
+            setOpen(false);
+            onSaved();
+        },
+        onError: (e) => setError(e),
+    });
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+                if (next) {
+                    setError(null);
+                    setForm(initial ?? { questionText: "", point: "", quizId: "" });
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                {mode === "create" ? (
+                    <Button size="sm" variant="outline" className="w-full">
+                        <HelpCircle className="mr-1 h-3.5 w-3.5" />
+                        New question
+                    </Button>
+                ) : (
+                    <Button size="icon" variant="ghost" className="h-7 w-7">
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                )}
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>
+                        {mode === "create" ? "Create Question" : "Edit Question"}
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <ApiAlert error={error} />
+                    <div className="space-y-1">
+                        <Label>Question</Label>
+                        <Textarea
+                            value={form.questionText}
+                            onChange={(e) => setForm({ ...form, questionText: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label>Points</Label>
+                        <Input
+                            type="number"
+                            min={0}
+                            placeholder="Auto split if empty"
+                            value={form.point ?? ""}
+                            onChange={(e) => setForm({ ...form, point: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label>Quiz</Label>
+                        <Select
+                            value={String(form.quizId)}
+                            onValueChange={(v) => setForm({ ...form, quizId: parseInt(v) })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose quiz" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {quizzes.map((quiz) => (
+                                    <SelectItem key={quiz.quizId} value={String(quiz.quizId)}>
+                                        {quiz.title}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                        Save
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function AnswerEditDialog({
+                              mode,
+                              initial,
+                              questions,
+                              onSaved,
+                          }: {
+    mode: "create" | "edit";
+    initial?: any;
+    questions: any[];
+    onSaved: () => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const [error, setError] = useState<any>(null);
+    const [form, setForm] = useState<any>(
+        initial ?? { answerText: "", isCorrect: false, questionId: "" },
+    );
+
+    const save = useMutation({
+        mutationFn: () => {
+            const body = {
+                answerText: form.answerText,
+                isCorrect: Boolean(form.isCorrect),
+                questionId: Number(form.questionId),
+            };
+            return api(mode === "create" ? "/api/answers" : `/api/answers/${initial.answerId}`, {
+                method: mode === "create" ? "POST" : "PUT",
+                body,
+            });
+        },
+        onSuccess: () => {
+            toast.success(mode === "create" ? "Answer created" : "Answer updated");
+            setOpen(false);
+            onSaved();
+        },
+        onError: (e) => setError(e),
+    });
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+                if (next) {
+                    setError(null);
+                    setForm(initial ?? { answerText: "", isCorrect: false, questionId: "" });
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                {mode === "create" ? (
+                    <Button size="sm" variant="outline" className="w-full">
+                        <CheckSquare className="mr-1 h-3.5 w-3.5" />
+                        New answer
+                    </Button>
+                ) : (
+                    <Button size="icon" variant="ghost" className="h-6 w-6">
+                        <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                )}
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{mode === "create" ? "Create Answer" : "Edit Answer"}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <ApiAlert error={error} />
+                    <div className="space-y-1">
+                        <Label>Answer</Label>
+                        <Textarea
+                            value={form.answerText}
+                            onChange={(e) => setForm({ ...form, answerText: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label>Question</Label>
+                        <Select
+                            value={String(form.questionId)}
+                            onValueChange={(v) => setForm({ ...form, questionId: parseInt(v) })}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Choose question" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {questions.map((question) => (
+                                    <SelectItem
+                                        key={question.questionId}
+                                        value={String(question.questionId)}
+                                    >
+                                        {question.questionText}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            checked={Boolean(form.isCorrect)}
+                            onCheckedChange={(checked) =>
+                                setForm({ ...form, isCorrect: checked === true })
+                            }
+                        />
+                        <Label>Correct answer</Label>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                        Save
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 

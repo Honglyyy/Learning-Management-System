@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiAlert } from "@/components/ApiAlert";
-import { Clock, User, Star, PlayCircle } from "lucide-react";
+import { Clock, User, Star, PlayCircle, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -195,7 +195,8 @@ function CourseDetail() {
             {c.coverDir && (
                 <img
                     src={mediaUrl(c.coverDir)}
-                    className="mt-6 aspect-video w-full rounded-lg object-cover"
+                    className="mt-6 object-cover"
+                    width={'250px'}
                 />
             )}
 
@@ -247,12 +248,28 @@ function CourseDetail() {
                                   </div>
 
                                   {isEnrolled ? (
-                                      <Button
-                                          size="sm"
-                                          onClick={() => setActiveLesson(lesson)}
-                                      >
-                                        Play
-                                      </Button>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => setActiveLesson(lesson)}
+                                        >
+                                          Play
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="gap-1"
+                                            onClick={() =>
+                                                nav({
+                                                  to: "/lessons/$lessonId/quiz",
+                                                  params: { lessonId: String(lesson.lessonId) },
+                                                })
+                                            }
+                                        >
+                                          <ListChecks className="h-4 w-4" />
+                                          Quiz
+                                        </Button>
+                                      </div>
                                   ) : (
                                       <Button size="sm" disabled>
                                         Enroll to watch

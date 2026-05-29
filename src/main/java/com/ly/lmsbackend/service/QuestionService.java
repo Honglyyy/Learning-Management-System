@@ -48,6 +48,7 @@ public class QuestionService {
         Quizzes quizId = quizRepository.findById(dto.quizId()).orElseThrow(()-> new RuntimeException("Quiz not found"));
 
         existingQuestion.setQuestionText(dto.questionText());
+        existingQuestion.setPoint(dto.point());
         existingQuestion.setQuiz(quizId);
 
         return questionMapper.toDto(questionRepository.save(existingQuestion));

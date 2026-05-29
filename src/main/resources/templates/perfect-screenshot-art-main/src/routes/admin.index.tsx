@@ -826,7 +826,7 @@ function AdminUsers() {
 
   const update = useMutation({
     mutationFn: () =>
-        api(`/api/users/${editing.userId}`, {
+        api(`/api/users/${editing.id}`, {
           method: "PUT",
           body: form,
         }),
@@ -919,7 +919,7 @@ function AdminUsers() {
           );
         }
 
-        return a.userId - b.userId;
+        return a.id - b.id;
       });
 
   return (
@@ -997,9 +997,10 @@ function AdminUsers() {
 
                 <TableBody>
                   {filteredUsers.map((u: any) => (
-                      <TableRow key={u.userId}>
+
+                      <TableRow key={u.id}>
                         <TableCell>
-                          {u.userId}
+                          {u.id}
                         </TableCell>
 
                         <TableCell>
@@ -1015,7 +1016,7 @@ function AdminUsers() {
                               value={u.role}
                               onValueChange={(v) =>
                                   updateRole.mutate({
-                                    id: u.userId,
+                                    id: u.id,
                                     role: v,
                                   })
                               }
@@ -1070,7 +1071,7 @@ function AdminUsers() {
                                     )
                                 ) {
                                   del.mutate(
-                                      u.userId
+                                      u.id
                                   );
                                 }
                               }}

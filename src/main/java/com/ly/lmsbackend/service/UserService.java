@@ -5,12 +5,21 @@ import com.ly.lmsbackend.dto.UserResponseDTO;
 import com.ly.lmsbackend.mapper.UserMapper;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
+import com.ly.lmsbackend.repository.CourseRepository;
+import com.ly.lmsbackend.repository.CourseReviewRepository;
+import com.ly.lmsbackend.repository.EnrollmentRepository;
+import com.ly.lmsbackend.repository.AnswerRepository;
+import com.ly.lmsbackend.repository.LessonRepository;
+import com.ly.lmsbackend.repository.PaymentRepository;
+import com.ly.lmsbackend.repository.QuestionRepository;
+import com.ly.lmsbackend.repository.QuizAttemptRepository;
+import com.ly.lmsbackend.repository.QuizRepository;
+import com.ly.lmsbackend.repository.SectionRepository;
 import com.ly.lmsbackend.repository.UserRepository;
-import jdk.jshell.spi.ExecutionControl;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -21,12 +30,32 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final EmailService emailService;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final PaymentRepository paymentRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final CourseReviewRepository courseReviewRepository;
+    private final CourseRepository courseRepository;
+    private final AnswerRepository answerRepository;
+    private final QuestionRepository questionRepository;
+    private final QuizRepository quizRepository;
+    private final LessonRepository lessonRepository;
+    private final SectionRepository sectionRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, EmailService emailService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, EmailService emailService, QuizAttemptRepository quizAttemptRepository, PaymentRepository paymentRepository, EnrollmentRepository enrollmentRepository, CourseReviewRepository courseReviewRepository, CourseRepository courseRepository, AnswerRepository answerRepository, QuestionRepository questionRepository, QuizRepository quizRepository, LessonRepository lessonRepository, SectionRepository sectionRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.emailService = emailService;
+        this.quizAttemptRepository = quizAttemptRepository;
+        this.paymentRepository = paymentRepository;
+        this.enrollmentRepository = enrollmentRepository;
+        this.courseReviewRepository = courseReviewRepository;
+        this.courseRepository = courseRepository;
+        this.answerRepository = answerRepository;
+        this.questionRepository = questionRepository;
+        this.quizRepository = quizRepository;
+        this.lessonRepository = lessonRepository;
+        this.sectionRepository = sectionRepository;
     }
 
     public UserResponseDTO register(RegisterRequest request){
@@ -156,11 +185,22 @@ public class UserService {
         return userMapper.dto(user);
     }
 
+    @Transactional
     public void deleteUser(Long id) {
         Users user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("User not found"));
 
+        quizAttemptRepository.deleteAllForUserRemoval(id);
+        paymentRepository.deleteAllForUserRemoval(id);
+        enrollmentRepository.deleteAllForUserRemoval(id);
+        courseReviewRepository.deleteAllForUserRemoval(id);
+        answerRepository.deleteAllForUserRemoval(id);
+        questionRepository.deleteAllForUserRemoval(id);
+        quizRepository.deleteAllForUserRemoval(id);
+        lessonRepository.deleteAllForUserRemoval(id);
+        sectionRepository.deleteAllForUserRemoval(id);
+        courseRepository.deleteAll(courseRepository.findByInstructor_Id(id));
         userRepository.delete(user);
     }
 }

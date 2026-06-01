@@ -6,6 +6,7 @@ import com.ly.lmsbackend.model.*;
 import com.ly.lmsbackend.repository.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,14 +19,16 @@ public class SectionService {
     private final LessonRepository lessonRepository;
     private final QuizRepository quizRepository;
     private final UserRepository userRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
 
-    public SectionService(SectionRepository sectionRepository, SectionMapper sectionMapper, CourseRepository courseRepository, CategoryRepository categoryRepository, LessonRepository lessonRepository, QuizRepository quizRepository, UserRepository userRepository) {
+    public SectionService(SectionRepository sectionRepository, SectionMapper sectionMapper, CourseRepository courseRepository, CategoryRepository categoryRepository, LessonRepository lessonRepository, QuizRepository quizRepository, UserRepository userRepository, QuizAttemptRepository quizAttemptRepository) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
         this.sectionMapper = sectionMapper;
         this.lessonRepository = lessonRepository;
         this.quizRepository = quizRepository;
         this.userRepository = userRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
     }
 
     public List<SectionResponseDTO> getSections(){
@@ -61,7 +64,13 @@ public class SectionService {
         return sectionMapper.toDto(sectionRepository.save(existingSection));
     }
 
+    @Transactional
     public void deleteSection(Long id){
+        if (!sectionRepository.existsById(id)) {
+            throw new RuntimeException("Section not found");
+        }
+
+        quizAttemptRepository.deleteAllBySectionId(id);
         sectionRepository.deleteById(id);
     }
 
@@ -104,6 +113,7 @@ public class SectionService {
         );
     }
 
+    @Transactional
     public void deleteMySection(
             Long id,
             String instructorEmail
@@ -126,6 +136,7 @@ public class SectionService {
             );
         }
 
+        quizAttemptRepository.deleteAllBySectionId(id);
         sectionRepository.delete(section);
     }
 

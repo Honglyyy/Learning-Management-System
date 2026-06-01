@@ -14,6 +14,30 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     Optional<QuizAttempt> findByUser_EmailAndQuiz_QuizId(String email, Long quizId);
 
     @Modifying
+    @Query("delete from QuizAttempt qa where qa.enrollment.enrollmentId = :enrollmentId")
+    void deleteAllByEnrollmentId(@Param("enrollmentId") Long enrollmentId);
+
+    @Modifying
+    @Query("delete from QuizAttempt qa where qa.quiz.quizId = :quizId")
+    void deleteAllByQuizId(@Param("quizId") Long quizId);
+
+    @Modifying
+    @Query("""
+            delete from QuizAttempt qa
+            where qa.enrollment.course.courseId = :courseId
+               or qa.quiz.lesson.section.course.courseId = :courseId
+            """)
+    void deleteAllByCourseId(@Param("courseId") Long courseId);
+
+    @Modifying
+    @Query("delete from QuizAttempt qa where qa.quiz.lesson.section.sectionId = :sectionId")
+    void deleteAllBySectionId(@Param("sectionId") Long sectionId);
+
+    @Modifying
+    @Query("delete from QuizAttempt qa where qa.quiz.lesson.lessonId = :lessonId")
+    void deleteAllByLessonId(@Param("lessonId") Long lessonId);
+
+    @Modifying
     @Query("""
             delete from QuizAttempt qa
             where qa.user.id = :userId

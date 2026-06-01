@@ -6,6 +6,7 @@ import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Lessons;
 import com.ly.lmsbackend.model.Sections;
 import com.ly.lmsbackend.repository.LessonRepository;
+import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
 import com.ly.lmsbackend.repository.SectionRepository;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,12 +21,14 @@ public class LessonService {
     private final LessonRepository lessonRepository;
     private final SectionRepository sectionRepository;
     private final QuizRepository quizRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
 
-    public LessonService(LessonMapper lessonMapper, LessonRepository lessonRepository, SectionRepository sectionRepository, QuizRepository quizRepository) {
+    public LessonService(LessonMapper lessonMapper, LessonRepository lessonRepository, SectionRepository sectionRepository, QuizRepository quizRepository, QuizAttemptRepository quizAttemptRepository) {
         this.lessonRepository = lessonRepository;
         this.lessonMapper = lessonMapper;
         this.sectionRepository = sectionRepository;
         this.quizRepository = quizRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
     }
 
     public List<LessonResponseDTO> getLessons() {
@@ -64,10 +67,7 @@ public class LessonService {
         Lessons lesson = lessonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lesson not found"));
 
-        if (lesson.getQuiz() != null) {
-            lesson.getQuiz().setLesson(null);
-        }
-
+        quizAttemptRepository.deleteAllByLessonId(id);
         lessonRepository.delete(lesson);
     }
 
@@ -142,6 +142,7 @@ public class LessonService {
         );
     }
 
+    @Transactional
     public void deleteMyLesson(
             Long id,
             String instructorEmail
@@ -164,6 +165,7 @@ public class LessonService {
             );
         }
 
+        quizAttemptRepository.deleteAllByLessonId(id);
         lessonRepository.delete(lesson);
     }
 

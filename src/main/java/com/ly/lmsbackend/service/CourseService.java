@@ -22,8 +22,9 @@ public class CourseService {
     private final SectionRepository sectionRepository;
     private final SectionMapper sectionMapper;
     private final CourseReviewRepository courseReviewRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
 
-    public CourseService(CourseRepository courseRepository, CourseMapper courseMapper, CategoryRepository categoryRepository, UserRepository userRepository, SectionRepository sectionRepository, SectionMapper sectionMapper, CourseReviewRepository courseReviewRepository) {
+    public CourseService(CourseRepository courseRepository, CourseMapper courseMapper, CategoryRepository categoryRepository, UserRepository userRepository, SectionRepository sectionRepository, SectionMapper sectionMapper, CourseReviewRepository courseReviewRepository, QuizAttemptRepository quizAttemptRepository) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.courseMapper = courseMapper;
@@ -31,6 +32,7 @@ public class CourseService {
         this.sectionRepository = sectionRepository;
         this.sectionMapper = sectionMapper;
         this.courseReviewRepository = courseReviewRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
     }
 
     public List<CourseResponseDTO> getAllCourses(){
@@ -77,6 +79,7 @@ public class CourseService {
 
         // remove rows from course_category
         course.getCategories().clear();
+        quizAttemptRepository.deleteAllByCourseId(id);
 
         courseRepository.delete(course);
     }
@@ -161,6 +164,7 @@ public class CourseService {
         );
     }
 
+    @Transactional
     public void deleteMyCourse(Long id, String instructorEmail) {
         Courses course = courseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
@@ -169,6 +173,8 @@ public class CourseService {
             throw new RuntimeException("Unauthorized");
         }
 
+        course.getCategories().clear();
+        quizAttemptRepository.deleteAllByCourseId(id);
         courseRepository.delete(course);
     }
 

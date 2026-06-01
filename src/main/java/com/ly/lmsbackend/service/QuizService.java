@@ -174,7 +174,13 @@ public class QuizService {
        return quizMapper.toDto(quizRepository.save(existingQuiz));
     }
 
+    @Transactional
     public void deleteQuiz(Long id){
+        if (!quizRepository.existsById(id)) {
+            throw new RuntimeException("Quiz not found");
+        }
+
+        quizAttemptRepository.deleteAllByQuizId(id);
         quizRepository.deleteById(id);
     }
 }

@@ -8,6 +8,7 @@ import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.repository.CategoryRepository;
 import com.ly.lmsbackend.repository.CourseRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -70,7 +71,16 @@ public class CategoryService {
         return categoryRepository.save(existingCategory);
     }
 
+    @Transactional
     public void deleteCategory(Long id){
-        categoryRepository.deleteById(id);
+        Categories category = categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category id " + id + " is not found!!"));
+
+        List<Courses> courses = courseRepository.findByCategories_CategoryId(id);
+        courses.forEach(course -> course.getCategories()
+                .removeIf(existingCategory -> existingCategory.getCategoryId().equals(id)));
+        courseRepository.saveAll(courses);
+
+        categoryRepository.delete(category);
     }
 }

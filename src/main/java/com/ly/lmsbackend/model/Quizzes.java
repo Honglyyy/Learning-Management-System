@@ -34,7 +34,7 @@ public class Quizzes {
     @Column(name = "total_point")
     private Double totalPoint;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne
     @JoinColumn(name = "lesson_id")
     private Lessons lesson;
 

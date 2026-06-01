@@ -45,7 +45,7 @@ public class Categories {
     @LastModifiedDate
     private Timestamp updatedAt;
 
-    @ManyToMany(mappedBy = "categories",cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "categories")
     @JsonIgnore
     private List<Courses> courses;
 }

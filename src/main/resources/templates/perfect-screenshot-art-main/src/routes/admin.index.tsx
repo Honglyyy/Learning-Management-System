@@ -457,7 +457,7 @@ function AdminEnrollments() {
                       <SelectContent>{ENROLL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell><Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(e.id); }}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                  <TableCell><Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(e.enrollmentId); }}><Trash2 className="h-4 w-4" /></Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -627,7 +627,7 @@ function QuestionPanel() {
                   <TableCell>{q.questionId}</TableCell><TableCell className="max-w-xs truncate">{q.questionText}</TableCell><TableCell>{quizzes?.find((z) => z.id === q.quizId)?.title || q.quizId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <QuestionDialog mode="edit" initial={q} quizzes={quizzes || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-questions"] })} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.questionId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -695,7 +695,7 @@ function AnswerPanel() {
                   <TableCell>{a.answerId}</TableCell><TableCell className="max-w-xs truncate">{a.answerText}</TableCell><TableCell>{a.isCorrect ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell><TableCell>{questions?.find((q) => q.id === a.questionId)?.questionText?.substring(0, 30) || a.questionId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <AnswerDialog mode="edit" initial={a} questions={questions || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-answers"] })} />
-                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(a.id); }}><Trash2 className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(a.answerId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}

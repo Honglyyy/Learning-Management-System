@@ -11,9 +11,11 @@ import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.EnrollmentRepository;
+import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -24,17 +26,20 @@ public class EnrollmentService {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final EnrollmentMapper enrollmentMapper;
+    private final QuizAttemptRepository quizAttemptRepository;
 
     public EnrollmentService(
             EnrollmentRepository enrollmentRepository,
             UserRepository userRepository,
             CourseRepository courseRepository,
-            EnrollmentMapper enrollmentMapper
+            EnrollmentMapper enrollmentMapper,
+            QuizAttemptRepository quizAttemptRepository
     ) {
         this.enrollmentRepository = enrollmentRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.enrollmentMapper = enrollmentMapper;
+        this.quizAttemptRepository = quizAttemptRepository;
     }
 
     public EnrollmentResponseDTO enrollCurrentUser(EnrollmentCreateDTO dto, String email) {
@@ -123,9 +128,11 @@ public class EnrollmentService {
         return enrollmentMapper.toDTO(enrollmentRepository.save(enrollment));
     }
 
+    @Transactional
     public void deleteEnrollment(Long enrollmentId, String managerEmail) {
         Enrollments enrollment = getEnrollment(enrollmentId);
         verifyCanManageCourse(managerEmail, enrollment.getCourse());
+        quizAttemptRepository.deleteAllByEnrollmentId(enrollmentId);
         enrollmentRepository.delete(enrollment);
     }
 

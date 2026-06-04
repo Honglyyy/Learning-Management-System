@@ -48,7 +48,16 @@ public class SectionController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @GetMapping("/api/sections/instructor/me")
-    public ResponseEntity<List<SectionResponseDTO>> getMySections(Authentication authentication) {
+    public ResponseEntity<List<SectionResponseDTO>> getMySections(
+            @RequestParam(required = false) Long courseId,
+            Authentication authentication
+    ) {
+        if (courseId != null) {
+            return ResponseEntity.ok(
+                    sectionService.getSectionByInstructorAndCourse(authentication.getName(), courseId)
+            );
+        }
+
         return ResponseEntity.ok(sectionService.getSectionByInstructor(authentication.getName()));
     }
 

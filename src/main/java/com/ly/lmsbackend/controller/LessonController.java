@@ -56,7 +56,23 @@ public class LessonController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @GetMapping("/api/lessons/instructor/me")
-    public ResponseEntity<List<LessonResponseDTO>> getMyLessonsByInstructor(Authentication authentication) {
+    public ResponseEntity<List<LessonResponseDTO>> getMyLessonsByInstructor(
+            @RequestParam(required = false) Long sectionId,
+            @RequestParam(required = false) Long courseId,
+            Authentication authentication
+    ) {
+        if (sectionId != null) {
+            return ResponseEntity.ok(
+                    lessonService.getLessonByInstructorAndSection(authentication.getName(), sectionId)
+            );
+        }
+
+        if (courseId != null) {
+            return ResponseEntity.ok(
+                    lessonService.getLessonByInstructorAndCourse(authentication.getName(), courseId)
+            );
+        }
+
         return ResponseEntity.ok(lessonService.getLessonByInstructor(authentication.getName()));
     }
 

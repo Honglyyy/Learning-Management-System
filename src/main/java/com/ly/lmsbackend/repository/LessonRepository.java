@@ -10,6 +10,8 @@ import java.util.List;
 
 public interface LessonRepository extends JpaRepository<Lessons, Long> {
     List<Lessons> findByInstructor_Email(String email);
+    List<Lessons> findByInstructor_EmailAndSection_SectionId(String email, Long sectionId);
+    List<Lessons> findByInstructor_EmailAndSection_Course_CourseId(String email, Long courseId);
 
     @Modifying
     @Query("""

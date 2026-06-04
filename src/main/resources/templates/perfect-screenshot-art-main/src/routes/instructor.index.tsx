@@ -47,6 +47,16 @@ import {
 } from "@/components/ui/accordion";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 import {
     Tabs,
@@ -67,6 +77,7 @@ import {
     Pencil,
     Trash2,
     Play,
+    Users,
 } from "lucide-react";
 
 export const Route = createFileRoute("/instructor/")({
@@ -1894,17 +1905,82 @@ function InstructorAnswerDialog({
 }
 
 // ---------------------------------------------------------------------------
-// Enrollments placeholder
+// Enrollments
 // ---------------------------------------------------------------------------
 
 function InstructorEnrollments() {
+    const { data, isLoading, error } = useQuery<any[]>({
+        queryKey: ["instructor-enrollments"],
+        queryFn: () => api("/api/enrollments"),
+    });
+
     return (
-        <Card>
-            <CardContent className="py-10">
-                <p className="text-center text-muted-foreground">
-                    Enrollment management here...
-                </p>
+        <Card className="overflow-hidden">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Students enrolled in your courses
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ApiAlert error={error} />
+
+                {isLoading ? (
+                    <Skeleton className="h-40 w-full" />
+                ) : !data || data.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-8 text-center">
+                        <p className="text-sm text-muted-foreground">
+                            No students have joined your courses yet.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Student</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Course</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Joined</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {data.map((enrollment: any) => (
+                                    <TableRow key={enrollment.enrollmentId}>
+                                        <TableCell className="font-medium">
+                                            {enrollment.username || `User #${enrollment.userId}`}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {enrollment.userEmail || "-"}
+                                        </TableCell>
+                                        <TableCell>
+                                            {enrollment.courseTitle || `Course #${enrollment.courseId}`}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={enrollment.status === "ACTIVE" ? "default" : "secondary"}>
+                                                {enrollment.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                            {formatDate(enrollment.enrolledAt)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
+}
+
+function formatDate(value?: string | number | null) {
+    if (!value) return "-";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleDateString();
 }

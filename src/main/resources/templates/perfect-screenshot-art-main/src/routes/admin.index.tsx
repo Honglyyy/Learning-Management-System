@@ -452,7 +452,7 @@ function AdminEnrollments() {
                   <TableCell>{e.username || e.userEmail || `#${e.userId}`}</TableCell>
                   <TableCell>{e.courseTitle || `#${e.courseId}`}</TableCell>
                   <TableCell>
-                    <Select value={e.status} onValueChange={(v) => update.mutate({ id: e.id, status: v })}>
+                    <Select value={e.status} onValueChange={(v) => update.mutate({ id: e.enrollmentId, status: v })}>
                       <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>{ENROLL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>

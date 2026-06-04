@@ -9,6 +9,7 @@ import com.ly.lmsbackend.repository.LessonRepository;
 import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
 import com.ly.lmsbackend.repository.SectionRepository;
+import com.ly.lmsbackend.repository.CourseRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +21,15 @@ public class LessonService {
     private final LessonMapper lessonMapper;
     private final LessonRepository lessonRepository;
     private final SectionRepository sectionRepository;
+    private final CourseRepository courseRepository;
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
 
-    public LessonService(LessonMapper lessonMapper, LessonRepository lessonRepository, SectionRepository sectionRepository, QuizRepository quizRepository, QuizAttemptRepository quizAttemptRepository) {
+    public LessonService(LessonMapper lessonMapper, LessonRepository lessonRepository, SectionRepository sectionRepository, CourseRepository courseRepository, QuizRepository quizRepository, QuizAttemptRepository quizAttemptRepository) {
         this.lessonRepository = lessonRepository;
         this.lessonMapper = lessonMapper;
         this.sectionRepository = sectionRepository;
+        this.courseRepository = courseRepository;
         this.quizRepository = quizRepository;
         this.quizAttemptRepository = quizAttemptRepository;
     }
@@ -106,6 +109,34 @@ public class LessonService {
 
     public List<LessonResponseDTO> getLessonByInstructor(String instructorEmail) {
         return lessonRepository.findByInstructor_Email(instructorEmail).stream().map(lessonMapper::toDto).toList();
+    }
+
+    public List<LessonResponseDTO> getLessonByInstructorAndSection(String instructorEmail, Long sectionId) {
+        Sections section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new RuntimeException("Section not found"));
+
+        if (!section.getCourse().getInstructor().getEmail().equals(instructorEmail)) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        return lessonRepository.findByInstructor_EmailAndSection_SectionId(instructorEmail, sectionId)
+                .stream()
+                .map(lessonMapper::toDto)
+                .toList();
+    }
+
+    public List<LessonResponseDTO> getLessonByInstructorAndCourse(String instructorEmail, Long courseId) {
+        Courses course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        if (!course.getInstructor().getEmail().equals(instructorEmail)) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        return lessonRepository.findByInstructor_EmailAndSection_Course_CourseId(instructorEmail, courseId)
+                .stream()
+                .map(lessonMapper::toDto)
+                .toList();
     }
 
     public LessonResponseDTO addLessonByInstructor(

@@ -79,6 +79,20 @@ public class SectionService {
                 .stream().map(sectionMapper::toDto).toList();
     }
 
+    public List<SectionResponseDTO> getSectionByInstructorAndCourse(String instructorEmail, Long courseId) {
+        Courses course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        if (!course.getInstructor().getEmail().equals(instructorEmail)) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        return sectionRepository.findByInstructor_EmailAndCourse_CourseId(instructorEmail, courseId)
+                .stream()
+                .map(sectionMapper::toDto)
+                .toList();
+    }
+
     public SectionResponseDTO addSectionByInstructor(
             SectionCreateDTO dto,
             String instructorEmail

@@ -11,6 +11,7 @@ import java.util.List;
 public interface SectionRepository extends JpaRepository<Sections, Long> {
     List<Sections> findByCourse_CourseId(Long courseId);
     List<Sections> findByInstructor_Email(String email);
+    List<Sections> findByInstructor_EmailAndCourse_CourseId(String email, Long courseId);
 
     @Modifying
     @Query("""

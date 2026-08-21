@@ -32,8 +32,11 @@ public class Lessons {
     @Column(name = "lesson_title")
     private String title;
 
-    @Column(name = "video_dir")
-    private String videoDir;
+    @Column(name = "video_url")
+    private String videoUrl;
+
+    @Column(name = "video_public_id")
+    private String videoPublicId;
 
     @CreatedBy
     private String createdBy;

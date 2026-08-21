@@ -1,5 +1,7 @@
 package com.ly.lmsbackend.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.ly.lmsbackend.dto.FileUploadResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -8,12 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -34,16 +32,16 @@ public class FileUploadService {
     );
     private static final Set<String> VIDEO_EXTENSIONS = Set.of("mp4", "webm", "mov", "avi");
 
-    private final Path uploadRoot;
+    private final Cloudinary cloudinary;
     private final long maxImageSize;
     private final long maxVideoSize;
 
     public FileUploadService(
-            @Value("${lms.upload-dir:uploads}") String uploadDir,
+            Cloudinary cloudinary,
             @Value("${lms.upload.max-image-size:5242880}") long maxImageSize,
             @Value("${lms.upload.max-video-size:524288000}") long maxVideoSize
     ) {
-        this.uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        this.cloudinary = cloudinary;
         this.maxImageSize = maxImageSize;
         this.maxVideoSize = maxVideoSize;
     }
@@ -67,29 +65,27 @@ public class FileUploadService {
 
         String originalFileName = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename();
         String extension = extension(originalFileName);
-        String fileName = UUID.randomUUID() + "." + extension;
-        Path targetDirectory = uploadRoot.resolve(folder).normalize();
-        Path targetFile = targetDirectory.resolve(fileName).normalize();
-
-        if (!targetFile.startsWith(targetDirectory)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path");
-        }
-
+        String publicId = UUID.randomUUID().toString();
+        
+        String url;
         try {
-            Files.createDirectories(targetDirectory);
-            try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, targetFile, StandardCopyOption.REPLACE_EXISTING);
-            }
+            String resourceType = folder.contains("video") ? "video" : "image";
+            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+                    "folder", folder,
+                    "public_id", publicId,
+                    "resource_type", resourceType
+            ));
+            url = uploadResult.get("secure_url").toString();
         } catch (IOException exception) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store uploaded file");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to upload file to Cloudinary");
         }
 
         return new FileUploadResponseDTO(
                 originalFileName,
-                fileName,
+                publicId,
                 file.getContentType(),
                 file.getSize(),
-                "/uploads/" + folder + "/" + fileName
+                url
         );
     }
 

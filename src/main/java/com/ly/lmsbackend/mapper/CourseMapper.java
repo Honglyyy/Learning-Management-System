@@ -30,7 +30,8 @@ public class CourseMapper {
         course.setDescription(dto.description());
         course.setPrice(dto.price());
         course.setOverallDuration(dto.overallDuration());
-        course.setCoverDir(dto.coverDir());
+        course.setCoverUrl(dto.coverUrl());
+        course.setCoverPublicId(dto.coverPublicId());
         course.setInstructor(instructor);
         course.setCategories(categories);
 
@@ -59,7 +60,8 @@ public class CourseMapper {
                 course.getDescription(),
                 course.getPrice(),
                 course.getOverallDuration(),
-                course.getCoverDir(),
+                course.getCoverUrl(),
+                course.getCoverPublicId(),
                 course.getInstructor().getId(),
                 course.getInstructor().getUsername(),
                 categoryIds,

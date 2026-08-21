@@ -13,7 +13,8 @@ public class LessonMapper {
         return new LessonResponseDTO(
                 lesson.getLessonId(),
                 lesson.getTitle(),
-                lesson.getVideoDir(),
+                lesson.getVideoUrl(),
+                lesson.getVideoPublicId(),
                 lesson.getSection().getSectionId(),
                 lesson.getSection().getTitle()
         );
@@ -26,7 +27,8 @@ public class LessonMapper {
         Lessons lesson = new Lessons();
 
         lesson.setTitle(dto.title());
-        lesson.setVideoDir(dto.videoDir());
+        lesson.setVideoUrl(dto.videoUrl());
+        lesson.setVideoPublicId(dto.videoPublicId());
         lesson.setSection(section);
 
         return lesson;

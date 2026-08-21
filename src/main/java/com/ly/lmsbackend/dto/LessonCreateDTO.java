@@ -2,7 +2,8 @@ package com.ly.lmsbackend.dto;
 
 public record LessonCreateDTO(
         String title,
-        String videoDir,
+        String videoUrl,
+        String videoPublicId,
         Long sectionId
 ) {
 }

@@ -2,7 +2,7 @@ package com.ly.lmsbackend.dto;
 
 public record FileUploadResponseDTO(
         String originalFileName,
-        String fileName,
+        String publicId,
         String contentType,
         long size,
         String url

@@ -3,6 +3,7 @@ package com.ly.lmsbackend.dto;
 public record LessonDetailDTO(
         Long lessonId,
         String title,
-        String videoDir
+        String videoUrl,
+        String videoPublicId
 ) {
 }

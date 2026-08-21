@@ -44,7 +44,8 @@ public class CategoryService {
                         courses.getDescription(),
                         courses.getPrice(),
                         courses.getOverallDuration(),
-                        courses.getCoverDir(),
+                        courses.getCoverUrl(),
+                        courses.getCoverPublicId(),
                         courses.getInstructor().getUsername()
                 ))
                 .toList();

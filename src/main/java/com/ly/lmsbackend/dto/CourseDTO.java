@@ -6,7 +6,8 @@ public record CourseDTO(
         String description,
         java.math.BigDecimal price,
         String overallDuration,
-        String coverDir,
+        String coverUrl,
+        String coverPublicId,
         String instructor
 ) {
 }

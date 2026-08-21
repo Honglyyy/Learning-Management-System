@@ -97,7 +97,8 @@ public class CourseService {
         existingCourse.setDescription(dto.description());
         existingCourse.setPrice(dto.price());
         existingCourse.setOverallDuration(dto.overallDuration());
-        existingCourse.setCoverDir(dto.coverDir());
+        existingCourse.setCoverUrl(dto.coverUrl());
+        existingCourse.setCoverPublicId(dto.coverPublicId());
         existingCourse.setInstructor(instructor);
         existingCourse.setCategories(categories);
 
@@ -119,7 +120,8 @@ public class CourseService {
                             .map(lessons -> new LessonDetailDTO(
                                     lessons.getLessonId(),
                                     lessons.getTitle(),
-                                    lessons.getVideoDir()
+                                    lessons.getVideoUrl(),
+                                    lessons.getVideoPublicId()
                             ))
                             .toList()
                 ))
@@ -154,7 +156,8 @@ public class CourseService {
                 course.getDescription(),
                 course.getPrice(),
                 course.getOverallDuration(),
-                course.getCoverDir(),
+                course.getCoverUrl(),
+                course.getCoverPublicId(),
                 course.getInstructor().getUsername(),
                 (long) course.getSections().size(),
                 rating,

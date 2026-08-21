@@ -58,7 +58,8 @@ public class LessonService {
         Sections sectionId = sectionRepository.findById(dto.sectionId()).orElse(null);
 
         existingLesson.setTitle(dto.title());
-        existingLesson.setVideoDir(dto.videoDir());
+        existingLesson.setVideoUrl(dto.videoUrl());
+        existingLesson.setVideoPublicId(dto.videoPublicId());
         existingLesson.setSection(sectionId);
 
         return lessonMapper.toDto(lessonRepository.save(existingLesson));
@@ -102,7 +103,8 @@ public class LessonService {
         return new LessonQuizDTO(
                 lessons.getLessonId(),
                 lessons.getTitle(),
-                lessons.getVideoDir(),
+                lessons.getVideoUrl(),
+                lessons.getVideoPublicId(),
                 quizzes
         );
     }
@@ -223,7 +225,8 @@ public class LessonService {
 
         // UPDATE FIELDS
         lesson.setTitle(dto.title());
-        lesson.setVideoDir(dto.videoDir());
+        lesson.setVideoUrl(dto.videoUrl());
+        lesson.setVideoPublicId(dto.videoPublicId());
 
         Lessons updated = lessonRepository.save(lesson);
 

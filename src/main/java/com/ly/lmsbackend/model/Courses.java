@@ -40,8 +40,11 @@ public class Courses {
     @Column(name = "overall_duration")
     private String overallDuration;
 
-    @Column(name = "cover_dir")
-    private String coverDir;
+    @Column(name = "cover_url")
+    private String coverUrl;
+
+    @Column(name = "cover_public_id")
+    private String coverPublicId;
 
     private BigDecimal price;
 

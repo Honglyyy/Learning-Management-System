@@ -8,7 +8,8 @@ public record CourseCreateDTO(
         String description,
         BigDecimal price,
         String overallDuration,
-        String coverDir,
+        String coverUrl,
+        String coverPublicId,
         Long instructor,
         List<Long> categoryId
 ) {

@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.CourseReviewCreateDTO;
-import com.ly.lmsbackend.dto.CourseReviewResponseDTO;
+import com.ly.lmsbackend.dto.coursereviewdtos.CourseReviewCreateDTO;
+import com.ly.lmsbackend.dto.coursereviewdtos.CourseReviewResponseDTO;
 import com.ly.lmsbackend.mapper.CourseReviewMapper;
 import com.ly.lmsbackend.model.CourseReviews;
 import com.ly.lmsbackend.model.Courses;

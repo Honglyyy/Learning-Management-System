@@ -1,10 +1,10 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.QuizDetailDTO;
-import com.ly.lmsbackend.dto.QuizAttemptResponseDTO;
-import com.ly.lmsbackend.dto.QuizCreateDTO;
-import com.ly.lmsbackend.dto.QuizResponseDTO;
-import com.ly.lmsbackend.dto.QuizSubmitDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizDetailDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizAttemptResponseDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizCreateDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizResponseDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizSubmitDTO;
 import com.ly.lmsbackend.service.QuizService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

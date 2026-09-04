@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.CourseReviewCreateDTO;
-import com.ly.lmsbackend.dto.CourseReviewResponseDTO;
+import com.ly.lmsbackend.dto.coursereviewdtos.CourseReviewCreateDTO;
+import com.ly.lmsbackend.dto.coursereviewdtos.CourseReviewResponseDTO;
 import com.ly.lmsbackend.service.CourseReviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

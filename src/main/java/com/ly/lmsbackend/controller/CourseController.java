@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.CourseCreateDTO;
-import com.ly.lmsbackend.dto.CourseDetailDTO;
-import com.ly.lmsbackend.dto.CourseResponseDTO;
+import com.ly.lmsbackend.dto.coursedtos.CourseCreateDTO;
+import com.ly.lmsbackend.dto.coursedtos.CourseDetailDTO;
+import com.ly.lmsbackend.dto.coursedtos.CourseResponseDTO;
 import com.ly.lmsbackend.service.CourseService;
 import com.ly.lmsbackend.service.SectionService;
 import org.springframework.http.HttpStatus;

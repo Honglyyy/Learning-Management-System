@@ -1,6 +1,6 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.FileUploadResponseDTO;
+import com.ly.lmsbackend.dto.filedtos.FileUploadResponseDTO;
 import com.ly.lmsbackend.service.FileUploadService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

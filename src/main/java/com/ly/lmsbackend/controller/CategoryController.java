@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.CategoryDetailDTO;
-import com.ly.lmsbackend.dto.CategoryResponseDTO;
+import com.ly.lmsbackend.dto.categorydtos.CategoryDetailDTO;
+import com.ly.lmsbackend.dto.categorydtos.CategoryResponseDTO;
 import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.service.CategoryService;
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,6 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.PaymentResponseDTO;
+import com.ly.lmsbackend.dto.paymentdtos.PaymentResponseDTO;
 import com.ly.lmsbackend.model.Payments;
 import org.springframework.stereotype.Component;
 

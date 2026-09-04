@@ -1,6 +1,7 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.*;
+import com.ly.lmsbackend.dto.sectiondtos.SectionCreateDTO;
+import com.ly.lmsbackend.dto.sectiondtos.SectionResponseDTO;
 import com.ly.lmsbackend.mapper.SectionMapper;
 import com.ly.lmsbackend.model.*;
 import com.ly.lmsbackend.repository.*;

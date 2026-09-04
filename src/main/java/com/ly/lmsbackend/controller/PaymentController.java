@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.PaymentCheckoutRequestDTO;
-import com.ly.lmsbackend.dto.PaymentResponseDTO;
-import com.ly.lmsbackend.dto.PaymentStatusUpdateDTO;
+import com.ly.lmsbackend.dto.paymentdtos.PaymentCheckoutRequestDTO;
+import com.ly.lmsbackend.dto.paymentdtos.PaymentResponseDTO;
+import com.ly.lmsbackend.dto.paymentdtos.PaymentStatusUpdateDTO;
 import com.ly.lmsbackend.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

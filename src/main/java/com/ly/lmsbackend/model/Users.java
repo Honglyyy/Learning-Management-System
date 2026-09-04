@@ -10,6 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,12 +37,25 @@ public class Users implements UserDetails {
     @Column(unique = true,  nullable = false)
     private String email;
 
+    @Column(unique = true, nullable = false)
+    private String fullname;
+
+    @Column(unique = true, nullable = false)
+    private String phoneNumber;
+
     private String otp;
     private Long verifyOtpExpireAt;
     private Boolean isVerified = false;
 
     private String resetOtp;
     private Long resetOtpExpireAt;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Students student;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Instructors instructor;
+
 
     @CreationTimestamp
     @Column(updatable = false)

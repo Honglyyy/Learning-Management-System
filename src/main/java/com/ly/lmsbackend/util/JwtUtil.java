@@ -1,6 +1,6 @@
 package com.ly.lmsbackend.util;
 
-import com.ly.lmsbackend.dto.RegisterRequest;
+import com.ly.lmsbackend.dto.authdtos.RegisterRequest;
 import com.ly.lmsbackend.model.Users;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

@@ -2,7 +2,7 @@ package com.ly.lmsbackend.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
-import com.ly.lmsbackend.dto.FileUploadResponseDTO;
+import com.ly.lmsbackend.dto.filedtos.FileUploadResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

@@ -1,9 +1,9 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.EnrollmentAdminCreateDTO;
-import com.ly.lmsbackend.dto.EnrollmentCreateDTO;
-import com.ly.lmsbackend.dto.EnrollmentResponseDTO;
-import com.ly.lmsbackend.dto.EnrollmentStatusUpdateDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentAdminCreateDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentCreateDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentResponseDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentStatusUpdateDTO;
 import com.ly.lmsbackend.service.EnrollmentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

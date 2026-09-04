@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.LessonCreateDTO;
-import com.ly.lmsbackend.dto.LessonQuizDTO;
-import com.ly.lmsbackend.dto.LessonResponseDTO;
+import com.ly.lmsbackend.dto.lessondtos.LessonCreateDTO;
+import com.ly.lmsbackend.dto.lessondtos.LessonQuizDTO;
+import com.ly.lmsbackend.dto.lessondtos.LessonResponseDTO;
 import com.ly.lmsbackend.service.LessonService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

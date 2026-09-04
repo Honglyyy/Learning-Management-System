@@ -1,10 +1,15 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.*;
+import com.ly.lmsbackend.dto.authdtos.RegisterRequest;
+import com.ly.lmsbackend.dto.authdtos.ResetPasswordRequest;
+import com.ly.lmsbackend.dto.authdtos.UpdateRoleRequest;
+import com.ly.lmsbackend.dto.authdtos.UserResponseDTO;
+import com.ly.lmsbackend.dto.authdtos.VerifyUserOtp;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.service.EmailService;
 import com.ly.lmsbackend.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,7 +28,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDTO> registerUser(@RequestBody RegisterRequest request) {
+    public ResponseEntity<UserResponseDTO> registerUser(@Valid @RequestBody RegisterRequest request) {
 
         Roles role = request.role();
 
@@ -36,9 +41,11 @@ public class UserController {
         }
 
         RegisterRequest registerRequest = new RegisterRequest(
-                request.email(),
                 request.username(),
+                request.email(),
                 request.password(),
+                request.fullName(),
+                request.phoneNumber(),
                 role
         );
 
@@ -48,13 +55,13 @@ public class UserController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/register")
-    public ResponseEntity<UserResponseDTO> registerAdmin(@RequestBody RegisterRequest request) {
+    public ResponseEntity<UserResponseDTO> registerAdmin(@Valid @RequestBody RegisterRequest request) {
         UserResponseDTO user = userService.register(request);
         return ResponseEntity.ok(user);
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<UserResponseDTO> verifyUser(@RequestBody VerifyUserOtp verifyUserOtp) {
+    public ResponseEntity<UserResponseDTO> verifyUser(@Valid @RequestBody VerifyUserOtp verifyUserOtp) {
         UserResponseDTO user = userService.verifyOtp(verifyUserOtp.email(), verifyUserOtp.otp());
         return ResponseEntity.ok(user);
     }
@@ -70,7 +77,7 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
             userService.resetPassword(
                     request.otp(),

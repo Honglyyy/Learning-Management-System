@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.QuestionCreateDTO;
-import com.ly.lmsbackend.dto.QuestionResponseDTO;
+import com.ly.lmsbackend.dto.questiondtos.QuestionCreateDTO;
+import com.ly.lmsbackend.dto.questiondtos.QuestionResponseDTO;
 import com.ly.lmsbackend.mapper.QuestionMapper;
 import com.ly.lmsbackend.model.Questions;
 import com.ly.lmsbackend.model.Quizzes;

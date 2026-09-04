@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.RegisterRequest;
-import com.ly.lmsbackend.dto.UserResponseDTO;
+import com.ly.lmsbackend.dto.authdtos.RegisterRequest;
+import com.ly.lmsbackend.dto.authdtos.UserResponseDTO;
 import com.ly.lmsbackend.mapper.UserMapper;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
@@ -67,6 +67,8 @@ public class UserService {
         users.setUsername(request.username());
         users.setPassword(passwordEncoder.encode(request.password()));
         users.setEmail(request.email());
+        users.setFullname(request.fullName());
+        users.setPhoneNumber(request.phoneNumber());
         users.setUserId(UUID.randomUUID().toString());
         users.setRole(request.role());
 

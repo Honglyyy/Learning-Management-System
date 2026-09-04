@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.controller;
 
-import com.ly.lmsbackend.dto.QuestionCreateDTO;
-import com.ly.lmsbackend.dto.QuestionResponseDTO;
+import com.ly.lmsbackend.dto.questiondtos.QuestionCreateDTO;
+import com.ly.lmsbackend.dto.questiondtos.QuestionResponseDTO;
 import com.ly.lmsbackend.service.QuestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

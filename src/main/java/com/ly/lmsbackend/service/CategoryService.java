@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.CategoryDetailDTO;
-import com.ly.lmsbackend.dto.CategoryResponseDTO;
-import com.ly.lmsbackend.dto.CourseDTO;
+import com.ly.lmsbackend.dto.categorydtos.CategoryDetailDTO;
+import com.ly.lmsbackend.dto.categorydtos.CategoryResponseDTO;
+import com.ly.lmsbackend.dto.coursedtos.CourseDTO;
 import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.repository.CategoryRepository;

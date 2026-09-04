@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.EnrollmentAdminCreateDTO;
-import com.ly.lmsbackend.dto.EnrollmentCreateDTO;
-import com.ly.lmsbackend.dto.EnrollmentResponseDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentAdminCreateDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentCreateDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentResponseDTO;
 import com.ly.lmsbackend.mapper.EnrollmentMapper;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.EnrollmentStatus;

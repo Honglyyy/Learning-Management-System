@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.LessonCreateDTO;
-import com.ly.lmsbackend.dto.LessonResponseDTO;
+import com.ly.lmsbackend.dto.lessondtos.LessonCreateDTO;
+import com.ly.lmsbackend.dto.lessondtos.LessonResponseDTO;
 import com.ly.lmsbackend.model.Lessons;
 import com.ly.lmsbackend.model.Sections;
 import org.springframework.stereotype.Component;

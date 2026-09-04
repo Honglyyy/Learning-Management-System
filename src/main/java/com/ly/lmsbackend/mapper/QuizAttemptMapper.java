@@ -1,6 +1,6 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.QuizAttemptResponseDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizAttemptResponseDTO;
 import com.ly.lmsbackend.model.QuizAttempt;
 import org.springframework.stereotype.Component;
 

@@ -1,12 +1,12 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.AnswerDetailDTO;
-import com.ly.lmsbackend.dto.QuestionDetailDTO;
-import com.ly.lmsbackend.dto.QuizAttemptResponseDTO;
-import com.ly.lmsbackend.dto.QuizCreateDTO;
-import com.ly.lmsbackend.dto.QuizDetailDTO;
-import com.ly.lmsbackend.dto.QuizResponseDTO;
-import com.ly.lmsbackend.dto.QuizSubmitDTO;
+import com.ly.lmsbackend.dto.questiondtos.QuestionDetailDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizAttemptResponseDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizCreateDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizDetailDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizResponseDTO;
+import com.ly.lmsbackend.dto.quizdtos.QuizSubmitDTO;
+import com.ly.lmsbackend.dto.answerdtos.AnswerDetailDTO;
 import com.ly.lmsbackend.mapper.QuizAttemptMapper;
 import com.ly.lmsbackend.mapper.QuizMapper;
 import com.ly.lmsbackend.model.Answers;

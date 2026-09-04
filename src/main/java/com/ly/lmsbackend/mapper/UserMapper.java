@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.AuthRequest;
-import com.ly.lmsbackend.dto.RegisterRequest;
-import com.ly.lmsbackend.dto.UserResponseDTO;
+import com.ly.lmsbackend.dto.authdtos.AuthRequest;
+import com.ly.lmsbackend.dto.authdtos.RegisterRequest;
+import com.ly.lmsbackend.dto.authdtos.UserResponseDTO;
 import com.ly.lmsbackend.model.Users;
 import org.springframework.stereotype.Component;
 

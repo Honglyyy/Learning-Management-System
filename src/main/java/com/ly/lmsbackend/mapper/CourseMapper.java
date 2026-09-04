@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.CourseCreateDTO;
-import com.ly.lmsbackend.dto.CourseResponseDTO;
+import com.ly.lmsbackend.dto.coursedtos.CourseCreateDTO;
+import com.ly.lmsbackend.dto.coursedtos.CourseResponseDTO;
 import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Users;

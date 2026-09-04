@@ -1,7 +1,7 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.AnswerCreateDTO;
-import com.ly.lmsbackend.dto.AnswerResponseDTO;
+import com.ly.lmsbackend.dto.answerdtos.AnswerCreateDTO;
+import com.ly.lmsbackend.dto.answerdtos.AnswerResponseDTO;
 import com.ly.lmsbackend.model.Answers;
 import com.ly.lmsbackend.model.Questions;
 import org.springframework.stereotype.Component;

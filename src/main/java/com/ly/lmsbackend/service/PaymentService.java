@@ -1,8 +1,8 @@
 package com.ly.lmsbackend.service;
 
-import com.ly.lmsbackend.dto.EnrollmentCreateDTO;
-import com.ly.lmsbackend.dto.PaymentCheckoutRequestDTO;
-import com.ly.lmsbackend.dto.PaymentResponseDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentCreateDTO;
+import com.ly.lmsbackend.dto.paymentdtos.PaymentCheckoutRequestDTO;
+import com.ly.lmsbackend.dto.paymentdtos.PaymentResponseDTO;
 import com.ly.lmsbackend.mapper.PaymentMapper;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.PaymentStatus;

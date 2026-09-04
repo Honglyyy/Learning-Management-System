@@ -1,6 +1,6 @@
 package com.ly.lmsbackend.mapper;
 
-import com.ly.lmsbackend.dto.EnrollmentResponseDTO;
+import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentResponseDTO;
 import com.ly.lmsbackend.model.Enrollments;
 import org.springframework.stereotype.Component;
 

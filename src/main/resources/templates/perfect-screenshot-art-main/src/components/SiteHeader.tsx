@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getApiBase, setApiBase } from "@/lib/api";
-import { GraduationCap, Settings } from "lucide-react";
+import { GraduationCap, Settings, Award } from "lucide-react";
+import { NotificationPopover } from "@/components/NotificationPopover";
 
 export function SiteHeader() {
   const { isAuthenticated, role, email, logout } = useAuth();
@@ -24,6 +25,7 @@ export function SiteHeader() {
         <nav className="hidden gap-6 text-sm md:flex">
           <Link to="/" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Courses</Link>
           <Link to="/instructors" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Instructors</Link>
+          <Link to="/verify-certificate" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Verify Certificate</Link>
           {isAuthenticated && (
             <>
               <Link to="/my/enrollments" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>My learning</Link>
@@ -41,6 +43,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
+              <NotificationPopover />
               <span className="hidden text-xs text-muted-foreground lg:inline">{email}</span>
               <Button variant="ghost" size="sm" onClick={() => nav({ to: "/profile" })}>
                 Profile

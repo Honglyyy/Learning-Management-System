@@ -19,6 +19,7 @@ public record StudentProfileResponseDTO(
         String educationLevel,
         String profilePhotoUrl,
         String profilePhotoPublicId,
+        Double totalPoints,
         Timestamp createdAt,
         Timestamp updatedAt
 ) {

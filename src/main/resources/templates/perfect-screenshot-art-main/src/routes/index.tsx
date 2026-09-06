@@ -20,6 +20,7 @@ import {
   Sparkles,
   TrendingUp,
   Filter,
+  Play,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -71,6 +72,12 @@ function Index() {
   const [sortOption, setSortOption] = useState<string>("latest");
   const [activeFeed, setActiveFeed] = useState<"all" | "featured" | "popular" | "favorites">("all");
   const [visibleCount, setVisibleCount] = useState(6);
+
+  const continueQuery = useQuery<any>({
+    queryKey: ["continue-learning"],
+    queryFn: () => api("/api/learning/continue", { auth: true }).catch(() => null),
+    enabled: isAuthenticated,
+  });
 
   // Main Courses Query
   const { data, isLoading, error } = useQuery<Course[]>({
@@ -777,6 +784,26 @@ function Index() {
       <div className="lumen-root">
         <SiteHeader />
 
+        {isAuthenticated && continueQuery.data?.courseId && (
+          <div className="bg-[#1c1917] border-b border-[#292524] text-white px-4 py-3">
+            <div className="max-w-[1200px] mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="bg-[#C9512A] text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                  Continue Learning
+                </span>
+                <span className="font-semibold text-sm">{continueQuery.data.courseTitle}</span>
+                <span className="text-[#a8a29e] hidden sm:inline">&bull; Next: {continueQuery.data.nextLessonTitle || "Next lesson"}</span>
+              </div>
+              <button
+                onClick={() => (window.location.href = `/courses/${continueQuery.data.courseId}`)}
+                className="bg-[#C9512A] hover:bg-[#b04522] text-white px-3 py-1.5 rounded font-medium transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Play size={12} fill="white" /> Resume ({continueQuery.data.progressPercentage ?? 0}%)
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <section className="hero">
           <div className="hero-inner">
@@ -1010,20 +1037,17 @@ function Index() {
             <div className="footer-col">
               <h4>Learn</h4>
               <ul>
-                <li><a href="#">All Courses</a></li>
-                <li><a href="#">New Releases</a></li>
-                <li><a href="#">Certificates</a></li>
-                <li><a href="#">Learning Paths</a></li>
+                <li><a href="/">All Courses</a></li>
+                <li><a href="/verify-certificate">Verify Certificate</a></li>
+                <li><a href="/my/enrollments">My Learning</a></li>
               </ul>
             </div>
 
             <div className="footer-col">
-              <h4>Company</h4>
+              <h4>Platform</h4>
               <ul>
-                <li><a href="#">About</a></li>
-                <li><a href="#">Instructors</a></li>
-                <li><a href="#">Careers</a></li>
-                <li><a href="#">Blog</a></li>
+                <li><a href="/instructors">Instructors</a></li>
+                <li><a href="/verify-certificate">Certificate Lookup</a></li>
               </ul>
             </div>
 

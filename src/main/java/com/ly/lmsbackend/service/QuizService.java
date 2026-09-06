@@ -10,6 +10,7 @@ import com.ly.lmsbackend.dto.answerdtos.AnswerDetailDTO;
 import com.ly.lmsbackend.mapper.QuizAttemptMapper;
 import com.ly.lmsbackend.mapper.QuizMapper;
 import com.ly.lmsbackend.model.Answers;
+import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.EnrollmentStatus;
 import com.ly.lmsbackend.model.Enrollments;
 import com.ly.lmsbackend.model.Lessons;
@@ -20,6 +21,7 @@ import com.ly.lmsbackend.repository.EnrollmentRepository;
 import com.ly.lmsbackend.repository.LessonRepository;
 import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,9 @@ public class QuizService {
     private final EnrollmentRepository enrollmentRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final QuizAttemptMapper quizAttemptMapper;
+    private final StudentPointsService studentPointsService;
+    private final ActivityLogService activityLogService;
+    private final ProgressService progressService;
 
     public QuizService(
             QuizRepository quizRepository,
@@ -47,12 +52,30 @@ public class QuizService {
             QuizAttemptRepository quizAttemptRepository,
             QuizAttemptMapper quizAttemptMapper
     ) {
+        this(quizRepository, quizMapper, lessonRepository, enrollmentRepository, quizAttemptRepository, quizAttemptMapper, null, null, null);
+    }
+
+    @Autowired
+    public QuizService(
+            QuizRepository quizRepository,
+            QuizMapper quizMapper,
+            LessonRepository lessonRepository,
+            EnrollmentRepository enrollmentRepository,
+            QuizAttemptRepository quizAttemptRepository,
+            QuizAttemptMapper quizAttemptMapper,
+            StudentPointsService studentPointsService,
+            ActivityLogService activityLogService,
+            ProgressService progressService
+    ) {
         this.quizRepository = quizRepository;
         this.quizMapper = quizMapper;
         this.lessonRepository = lessonRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.quizAttemptMapper = quizAttemptMapper;
+        this.studentPointsService = studentPointsService;
+        this.activityLogService = activityLogService;
+        this.progressService = progressService;
     }
 
     public List<QuizResponseDTO> getQuizzes(){
@@ -148,7 +171,34 @@ public class QuizService {
         attempt.setCorrectAnswers(correctAnswers);
         attempt.setTotalQuestions(questions.size());
 
-        return quizAttemptMapper.toDto(quizAttemptRepository.save(attempt));
+        QuizAttempt savedAttempt = quizAttemptRepository.save(attempt);
+
+        // Sync and add quiz points with assignment points for student & course
+        Courses course = quiz.getLesson() != null && quiz.getLesson().getSection() != null
+                ? quiz.getLesson().getSection().getCourse()
+                : null;
+        if (studentPointsService != null) {
+            if (course != null) {
+                studentPointsService.recalculateCourseAndStudentPoints(enrollment.getUser(), course, enrollment);
+            } else {
+                studentPointsService.syncGlobalStudentPoints(enrollment.getUser());
+            }
+        }
+
+        // Log activity
+        if (activityLogService != null) {
+            activityLogService.logActivity(
+                    enrollment.getUser(),
+                    "QUIZ_ATTEMPT",
+                    "Submitted quiz: " + quiz.getQuizTitle() + " (" + correctAnswers + "/" + questions.size() + " correct, " + earnedPoints + " pts)"
+            );
+        }
+
+        if (course != null && progressService != null) {
+            progressService.checkCourseCompletion(enrollment.getUser(), course);
+        }
+
+        return quizAttemptMapper.toDto(savedAttempt);
     }
 
     public QuizResponseDTO addQuiz(QuizCreateDTO dto){

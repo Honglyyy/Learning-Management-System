@@ -37,6 +37,12 @@ public class Enrollments {
     @Column(nullable = false)
     private EnrollmentStatus status = EnrollmentStatus.ACTIVE;
 
+    @Column(name = "earned_points")
+    private Double earnedPoints = 0.0;
+
+    @Column(name = "total_points")
+    private Double totalPoints = 0.0;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Timestamp enrolledAt;

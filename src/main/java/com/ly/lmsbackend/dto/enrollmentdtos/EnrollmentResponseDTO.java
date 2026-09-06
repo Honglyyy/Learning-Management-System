@@ -13,6 +13,8 @@ public record EnrollmentResponseDTO(
         String courseTitle,
         String instructor,
         EnrollmentStatus status,
+        Double earnedPoints,
+        Double totalPoints,
         Timestamp enrolledAt,
         Timestamp updatedAt
 ) {

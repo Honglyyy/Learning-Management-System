@@ -82,6 +82,10 @@ function LessonQuizPage() {
     onSuccess: (attempt) => {
       setSubmitted(true);
       qc.setQueryData(["quiz-attempt", attempt.quizId], attempt);
+      qc.invalidateQueries({ queryKey: ["course-progress"] });
+      qc.invalidateQueries({ queryKey: ["my-enrollments"] });
+      qc.invalidateQueries({ queryKey: ["student-profile"] });
+      qc.invalidateQueries({ queryKey: ["continue-learning"] });
       toast.success("Quiz score saved");
     },
     onError: () => toast.error("Failed to save quiz score"),

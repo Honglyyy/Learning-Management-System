@@ -3,6 +3,7 @@ package com.ly.lmsbackend.service;
 import com.ly.lmsbackend.dto.assignmentdtos.*;
 import com.ly.lmsbackend.model.*;
 import com.ly.lmsbackend.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,10 @@ public class AssignmentService {
     private final StudentRepository studentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final FileUploadService fileUploadService;
+    private final StudentPointsService studentPointsService;
+    private final NotificationService notificationService;
+    private final ActivityLogService activityLogService;
+    private final ProgressService progressService;
 
     public AssignmentService(
             AssignmentRepository assignmentRepository,
@@ -34,6 +39,26 @@ public class AssignmentService {
             EnrollmentRepository enrollmentRepository,
             FileUploadService fileUploadService
     ) {
+        this(assignmentRepository, submissionRepository, courseRepository, sectionRepository,
+                userRepository, studentRepository, enrollmentRepository, fileUploadService,
+                null, null, null, null);
+    }
+
+    @Autowired
+    public AssignmentService(
+            AssignmentRepository assignmentRepository,
+            AssignmentSubmissionRepository submissionRepository,
+            CourseRepository courseRepository,
+            SectionRepository sectionRepository,
+            UserRepository userRepository,
+            StudentRepository studentRepository,
+            EnrollmentRepository enrollmentRepository,
+            FileUploadService fileUploadService,
+            StudentPointsService studentPointsService,
+            NotificationService notificationService,
+            ActivityLogService activityLogService,
+            ProgressService progressService
+    ) {
         this.assignmentRepository = assignmentRepository;
         this.submissionRepository = submissionRepository;
         this.courseRepository = courseRepository;
@@ -42,6 +67,10 @@ public class AssignmentService {
         this.studentRepository = studentRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.fileUploadService = fileUploadService;
+        this.studentPointsService = studentPointsService;
+        this.notificationService = notificationService;
+        this.activityLogService = activityLogService;
+        this.progressService = progressService;
     }
 
     @Transactional
@@ -236,6 +265,19 @@ public class AssignmentService {
         }
 
         AssignmentSubmission saved = submissionRepository.save(submission);
+
+        if (activityLogService != null) {
+            activityLogService.logActivity(
+                    user,
+                    "ASSIGNMENT_SUBMITTED",
+                    "Submitted assignment: " + assignment.getTitle() + " for course " + assignment.getCourse().getTitle()
+            );
+        }
+
+        if (progressService != null) {
+            progressService.checkCourseCompletion(user, assignment.getCourse());
+        }
+
         return toSubmissionDTO(saved);
     }
 
@@ -322,6 +364,36 @@ public class AssignmentService {
         }
 
         AssignmentSubmission saved = submissionRepository.save(submission);
+
+        // Sync points
+        if (studentPointsService != null) {
+            studentPointsService.recalculateCourseAndStudentPoints(submission.getStudent(), submission.getAssignment().getCourse());
+        }
+
+        // Notify student
+        String scoreDisplay = submission.getScore() != null ? String.valueOf(submission.getScore()) : "Reviewed";
+        if (notificationService != null) {
+            notificationService.sendNotification(
+                    submission.getStudent(),
+                    "Assignment Graded",
+                    "Your submission for '" + submission.getAssignment().getTitle() + "' has been evaluated. Score: " + scoreDisplay + (submission.getGrade() != null ? " (" + submission.getGrade() + ")" : ""),
+                    "ASSIGNMENT",
+                    "/api/assignments/" + submission.getAssignment().getAssignmentId()
+            );
+        }
+
+        if (activityLogService != null) {
+            activityLogService.logActivity(
+                    submission.getStudent(),
+                    "ASSIGNMENT_GRADED",
+                    "Assignment graded: " + submission.getAssignment().getTitle() + " (Score: " + scoreDisplay + ")"
+            );
+        }
+
+        if (progressService != null) {
+            progressService.checkCourseCompletion(submission.getStudent(), submission.getAssignment().getCourse());
+        }
+
         return toSubmissionDTO(saved);
     }
 

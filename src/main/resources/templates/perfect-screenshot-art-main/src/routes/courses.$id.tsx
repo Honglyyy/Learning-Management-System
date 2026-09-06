@@ -4,13 +4,14 @@ import {
   useParams,
 } from "@tanstack/react-router";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, getApiBase } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ApiAlert } from "@/components/ApiAlert";
 import {
   Clock,
@@ -31,6 +32,9 @@ import {
   CreditCard,
   ExternalLink,
   Heart,
+  Award,
+  Trophy,
+  Sparkles,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -123,8 +127,35 @@ function CourseDetail() {
       enrollments.data?.some(
           (e: any) =>
               String(e.course?.courseId ?? e.courseId) === String(id) &&
-              e.status === "ACTIVE"
+              (e.status === "ACTIVE" || e.status === "COMPLETED")
       ) || false;
+
+  const progressQuery = useQuery<any>({
+    queryKey: ["course-progress", id],
+    queryFn: () => api(`/api/courses/${id}/progress`, { auth: true }).catch(() => null),
+    enabled: isAuthenticated && isEnrolled,
+  });
+
+  const certificatesQuery = useQuery<any[]>({
+    queryKey: ["my-certificates"],
+    queryFn: () => api(`/api/certificates/me`, { auth: true }).catch(() => []),
+    enabled: isAuthenticated && isEnrolled,
+  });
+
+  const courseCertificate = certificatesQuery.data?.find(
+    (cert: any) => String(cert.courseId) === String(id)
+  );
+
+  const claimCertificateMutation = useMutation({
+    mutationFn: () => api(`/api/certificates/claim/${id}`, { method: "POST", auth: true }),
+    onSuccess: () => {
+      toast.success("Congratulations! Certificate generated successfully!");
+      qc.invalidateQueries({ queryKey: ["my-certificates"] });
+      qc.invalidateQueries({ queryKey: ["my-enrollments"] });
+      qc.invalidateQueries({ queryKey: ["course-progress", id] });
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to claim certificate"),
+  });
 
   const lessonsStatusQuery = useQuery<any[]>({
     queryKey: ["lessons-status", id],
@@ -613,7 +644,14 @@ function CourseDetail() {
             <Card className="sticky top-20">
               <CardHeader>
                 <CardTitle className="text-3xl">
-                  ${Number(c.price ?? 0).toFixed(2)}
+                  {isEnrolled ? (
+                    <span className="text-xl font-bold text-foreground flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-emerald-600" />
+                      Enrolled
+                    </span>
+                  ) : (
+                    `$${Number(c.price ?? 0).toFixed(2)}`
+                  )}
                 </CardTitle>
               </CardHeader>
 
@@ -621,9 +659,72 @@ function CourseDetail() {
                 <ApiAlert error={checkoutError} />
 
                 {isEnrolled ? (
-                  <Button className="w-full" disabled>
-                    Already Enrolled
-                  </Button>
+                  <div className="space-y-4 rounded-lg border border-border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Course Progress</span>
+                      <Badge variant={progressQuery.data?.isCompleted || (progressQuery.data?.progressPercentage ?? 0) >= 100 ? "default" : "secondary"} className="text-xs">
+                        {progressQuery.data?.progressPercentage ?? 0}%
+                      </Badge>
+                    </div>
+
+                    <Progress value={progressQuery.data?.progressPercentage ?? 0} className="h-2.5" />
+
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                      <div className="rounded bg-background p-2 border border-border">
+                        <span className="text-muted-foreground block text-[10px]">Points Earned</span>
+                        <span className="font-bold text-primary text-sm flex items-center gap-1">
+                          <Trophy className="h-3.5 w-3.5 text-amber-500" />
+                          {progressQuery.data?.earnedPoints ?? 0} / {progressQuery.data?.totalPoints ?? 0}
+                        </span>
+                      </div>
+                      <div className="rounded bg-background p-2 border border-border">
+                        <span className="text-muted-foreground block text-[10px]">Lessons Completed</span>
+                        <span className="font-bold text-foreground text-sm">
+                          {progressQuery.data?.completedLessons ?? 0} / {progressQuery.data?.totalLessons ?? 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(progressQuery.data?.totalQuizzes > 0 || progressQuery.data?.totalAssignments > 0) && (
+                      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                        {progressQuery.data?.totalQuizzes > 0 && (
+                          <span>Quizzes: {progressQuery.data?.passedQuizzes ?? 0}/{progressQuery.data?.totalQuizzes}</span>
+                        )}
+                        {progressQuery.data?.totalAssignments > 0 && (
+                          <span>Assignments: {progressQuery.data?.completedAssignments ?? 0}/{progressQuery.data?.totalAssignments}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Certificate Action */}
+                    {courseCertificate ? (
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                          <Award className="h-4 w-4" /> Certificate Earned
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full gap-1.5 bg-[#005a87] hover:bg-[#00476a] text-white"
+                          onClick={() => window.open(`${getApiBase()}/api/certificates/${encodeURIComponent(courseCertificate.certificateCode)}/view`, "_blank", "noopener,noreferrer")}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" /> View & Print Certificate
+                        </Button>
+                      </div>
+                    ) : (progressQuery.data?.progressPercentage ?? 0) >= 100 ? (
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <div className="text-xs text-muted-foreground">You completed 100% of this course!</div>
+                        <Button
+                          size="sm"
+                          className="w-full gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-sm"
+                          disabled={claimCertificateMutation.isPending}
+                          onClick={() => claimCertificateMutation.mutate()}
+                        >
+                          <Award className="h-4 w-4" />
+                          {claimCertificateMutation.isPending ? "Issuing Certificate..." : "Claim Official Certificate"}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 ) : pendingPayment ? (
                   <div className="space-y-2.5">
                     <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-200">
@@ -942,7 +1043,11 @@ function LessonPlayerModal({
       toast.success("Lesson marked as complete!");
       qc.invalidateQueries({ queryKey: ["lessons-status", courseId] });
       qc.invalidateQueries({ queryKey: ["lesson-progress", lesson.lessonId] });
+      qc.invalidateQueries({ queryKey: ["course-progress", courseId] });
       qc.invalidateQueries({ queryKey: ["course", courseId] });
+      qc.invalidateQueries({ queryKey: ["my-enrollments"] });
+      qc.invalidateQueries({ queryKey: ["student-profile"] });
+      qc.invalidateQueries({ queryKey: ["continue-learning"] });
     },
     onError: () => toast.error("Failed to mark lesson complete"),
   });
@@ -1193,6 +1298,9 @@ function StudentAssignmentModal({
       toast.success(isSubmitted ? "Assignment resubmitted successfully!" : "Assignment submitted successfully!");
       qc.invalidateQueries({ queryKey: ["assignment-my-submission", assignment.assignmentId] });
       qc.invalidateQueries({ queryKey: ["course-assignments"] });
+      qc.invalidateQueries({ queryKey: ["course-progress"] });
+      qc.invalidateQueries({ queryKey: ["my-enrollments"] });
+      qc.invalidateQueries({ queryKey: ["student-profile"] });
     } catch (err: any) {
       toast.error(err.message || "Failed to submit assignment");
     } finally {

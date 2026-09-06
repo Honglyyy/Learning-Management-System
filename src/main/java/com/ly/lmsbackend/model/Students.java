@@ -54,6 +54,10 @@ public class Students {
     @Column(name = "profile_photo_public_id")
     private String profilePhotoPublicId;
 
+    @Builder.Default
+    @Column(name = "total_points")
+    private Double totalPoints = 0.0;
+
 //    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
 //    private List<Enrollments> enrollments;
 //

@@ -14,8 +14,10 @@ public class EnrollmentMapper {
                 enrollment.getUser().getEmail(),
                 enrollment.getCourse().getCourseId(),
                 enrollment.getCourse().getTitle(),
-                enrollment.getCourse().getInstructor().getUsername(),
+                enrollment.getCourse().getInstructor() != null ? enrollment.getCourse().getInstructor().getUsername() : null,
                 enrollment.getStatus(),
+                enrollment.getEarnedPoints() != null ? enrollment.getEarnedPoints() : 0.0,
+                enrollment.getTotalPoints() != null ? enrollment.getTotalPoints() : 0.0,
                 enrollment.getEnrolledAt(),
                 enrollment.getUpdatedAt()
         );

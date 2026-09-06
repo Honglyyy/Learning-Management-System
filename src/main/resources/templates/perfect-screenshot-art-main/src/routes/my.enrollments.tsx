@@ -1,24 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, getApiBase } from "@/lib/api";
 import { SiteHeader } from "@/components/SiteHeader";
 import { RequireAuth } from "@/components/RequireRole";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { ApiAlert } from "@/components/ApiAlert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { User, Calendar, Heart, BookmarkCheck, BookOpen, Clock, Star } from "lucide-react";
+import {
+  User,
+  Calendar,
+  Heart,
+  BookmarkCheck,
+  BookOpen,
+  Clock,
+  Star,
+  Award,
+  Play,
+  ExternalLink,
+  Trophy,
+} from "lucide-react";
 
 export const Route = createFileRoute("/my/enrollments")({
   head: () => ({ meta: [{ title: "My learning — Lumen LMS" }] }),
-  component: () => <RequireAuth><Page /></RequireAuth>,
+  component: () => (
+    <RequireAuth>
+      <Page />
+    </RequireAuth>
+  ),
 });
 
 function Page() {
   const qc = useQueryClient();
+
+  const continueQuery = useQuery<any>({
+    queryKey: ["continue-learning"],
+    queryFn: () => api("/api/learning/continue", { auth: true }).catch(() => null),
+  });
 
   const enrollmentsQuery = useQuery<any[]>({
     queryKey: ["my-enrollments"],
@@ -30,11 +52,17 @@ function Page() {
     queryFn: () => api("/api/favorites"),
   });
 
+  const certificatesQuery = useQuery<any[]>({
+    queryKey: ["my-certificates"],
+    queryFn: () => api("/api/certificates/me", { auth: true }).catch(() => []),
+  });
+
   const cancelEnrollment = useMutation({
     mutationFn: (courseId: number) => api(`/api/enrollments/me/courses/${courseId}`, { method: "DELETE" }),
     onSuccess: () => {
       toast.success("Enrollment cancelled.");
       qc.invalidateQueries({ queryKey: ["my-enrollments"] });
+      qc.invalidateQueries({ queryKey: ["continue-learning"] });
     },
     onError: (e: any) => toast.error(e.message || "Failed to cancel"),
   });
@@ -53,6 +81,7 @@ function Page() {
   const inProgress = enrollments.filter((e) => e.status !== "COMPLETED");
   const completed = enrollments.filter((e) => e.status === "COMPLETED");
   const favorites = favoritesQuery.data || [];
+  const certificates = certificatesQuery.data || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,18 +98,57 @@ function Page() {
 
         <ApiAlert error={enrollmentsQuery.error || favoritesQuery.error} />
 
+        {/* CONTINUE LEARNING BANNER */}
+        {continueQuery.data?.courseId && (
+          <div className="mb-8 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-1">
+                <Badge variant="secondary" className="text-[10px] font-semibold tracking-wider uppercase mb-1">
+                  Resume Learning
+                </Badge>
+                <h2 className="text-lg font-bold text-foreground">
+                  {continueQuery.data.courseTitle}
+                </h2>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Play className="h-3 w-3 text-primary fill-primary" />
+                  Next: <span className="font-medium text-foreground">{continueQuery.data.nextLessonTitle || "Next Lesson"}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="hidden md:block w-32 space-y-1 text-right">
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {continueQuery.data.progressPercentage ?? 0}% done
+                  </span>
+                  <Progress value={continueQuery.data.progressPercentage ?? 0} className="h-2" />
+                </div>
+                <Button
+                  size="sm"
+                  className="gap-1.5 font-medium shadow-sm"
+                  onClick={() => (window.location.href = `/courses/${continueQuery.data.courseId}`)}
+                >
+                  <Play className="h-3.5 w-3.5 fill-white" /> Continue
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Tabs defaultValue="in-progress" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="in-progress" className="flex items-center gap-1.5">
-              <BookOpen className="h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-4 max-w-xl">
+            <TabsTrigger value="in-progress" className="flex items-center gap-1 text-xs sm:text-sm">
+              <BookOpen className="h-3.5 w-3.5" />
               <span>In Progress ({inProgress.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="completed" className="flex items-center gap-1.5">
-              <BookmarkCheck className="h-4 w-4" />
+            <TabsTrigger value="completed" className="flex items-center gap-1 text-xs sm:text-sm">
+              <BookmarkCheck className="h-3.5 w-3.5" />
               <span>Completed ({completed.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="saved" className="flex items-center gap-1.5">
-              <Heart className="h-4 w-4 text-rose-500" />
+            <TabsTrigger value="certificates" className="flex items-center gap-1 text-xs sm:text-sm">
+              <Award className="h-3.5 w-3.5 text-amber-500" />
+              <span>Certificates ({certificates.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="flex items-center gap-1 text-xs sm:text-sm">
+              <Heart className="h-3.5 w-3.5 text-rose-500" />
               <span>Saved ({favorites.length})</span>
             </TabsTrigger>
           </TabsList>
@@ -104,7 +172,7 @@ function Page() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {inProgress.map((e: any) => renderEnrollmentCard(e, cancelEnrollment))}
+                {inProgress.map((e: any) => renderEnrollmentCard(e, cancelEnrollment, certificates))}
               </div>
             )}
           </TabsContent>
@@ -125,7 +193,76 @@ function Page() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {completed.map((e: any) => renderEnrollmentCard(e, cancelEnrollment))}
+                {completed.map((e: any) => renderEnrollmentCard(e, cancelEnrollment, certificates))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* CERTIFICATES TAB */}
+          <TabsContent value="certificates">
+            {certificatesQuery.isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2].map((i) => <Skeleton key={i} className="h-44" />)}
+              </div>
+            ) : certificates.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-10 text-center">
+                <Award className="mx-auto h-8 w-8 text-amber-500 mb-3" />
+                <h3 className="font-semibold text-foreground">No certificates earned yet</h3>
+                <p className="text-sm text-muted-foreground mt-1 mb-4">
+                  Complete 100% of a course's lessons, quizzes, and assignments to claim your official accredited certificate.
+                </p>
+                <Button size="sm" onClick={() => (window.location.href = "/")}>
+                  Find Courses
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {certificates.map((cert: any) => (
+                  <Card key={cert.certificateId} className="border-[#005a87]/30 hover:shadow-lg transition flex flex-col justify-between overflow-hidden">
+                    <div>
+                      <div className="bg-[#005a87]/10 px-4 py-2 border-b border-[#005a87]/20 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[#005a87] dark:text-cyan-400 font-semibold text-xs">
+                          <Award className="h-4 w-4" /> COURSE COMPLETION
+                        </div>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {cert.certificateCode}
+                        </Badge>
+                      </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base line-clamp-2">{cert.courseTitle}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pb-3 text-xs text-muted-foreground space-y-1">
+                        <p className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Issued {cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString() : "Verified"}
+                        </p>
+                        {cert.finalScore != null && (
+                          <p className="font-medium text-foreground flex items-center gap-1">
+                            <Trophy className="h-3 w-3 text-amber-500" />
+                            Final Points / Score: {cert.finalScore}
+                          </p>
+                        )}
+                      </CardContent>
+                    </div>
+                    <div className="p-4 pt-0 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 gap-1 bg-[#005a87] hover:bg-[#00476a] text-white text-xs"
+                        onClick={() => window.open(`${getApiBase()}/api/certificates/${encodeURIComponent(cert.certificateCode)}/view`, "_blank", "noopener,noreferrer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> View & Print
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => (window.location.href = `/verify-certificate?code=${encodeURIComponent(cert.certificateCode)}`)}
+                      >
+                        Verify
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
@@ -222,52 +359,79 @@ function Page() {
   );
 }
 
-function renderEnrollmentCard(e: any, cancelMutation: any) {
+function renderEnrollmentCard(e: any, cancelMutation: any, certificates: any[] = []) {
   const course = e.course;
   const courseId = course?.courseId ?? e.courseId;
   const title = course?.title || e.courseTitle || `Course #${courseId}`;
   const inst = e.instructor || course?.instructor?.username || e.instructorName;
   const enrolledDate = e.enrolledAt || e.createdAt;
+  const isCompleted = e.status === "COMPLETED";
+  const cert = certificates.find((c: any) => String(c.courseId) === String(courseId));
 
   return (
-    <Card key={e.enrollmentId || e.id || courseId} className="hover:shadow-md transition">
-      <CardHeader>
-        <CardTitle className="text-base line-clamp-1">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          {inst && (
-            <span className="flex items-center gap-1 font-medium text-foreground">
-              <User className="h-3.5 w-3.5 text-muted-foreground" /> {inst}
-            </span>
-          )}
-          <Badge variant={e.status === "ACTIVE" ? "default" : "secondary"}>{e.status}</Badge>
-          {enrolledDate && (
-            <span className="flex items-center gap-1 text-xs">
-              <Calendar className="h-3.5 w-3.5" />
-              Enrolled {new Date(enrolledDate).toLocaleDateString()}
-            </span>
-          )}
-        </div>
-        <div className="mt-4 flex items-center justify-between">
+    <Card key={e.enrollmentId || e.id || courseId} className="hover:shadow-md transition flex flex-col justify-between">
+      <div>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <Badge variant={isCompleted ? "default" : "secondary"}>{e.status}</Badge>
+            {e.totalPoints != null && e.totalPoints > 0 && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-primary">
+                <Trophy className="h-3 w-3 text-amber-500" />
+                {e.earnedPoints ?? 0} / {e.totalPoints} pts
+              </span>
+            )}
+          </div>
+          <CardTitle className="text-base line-clamp-1">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2">
+            {inst && (
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                <User className="h-3.5 w-3.5 text-muted-foreground" /> {inst}
+              </span>
+            )}
+            {enrolledDate && (
+              <span className="flex items-center gap-1 text-xs">
+                <Calendar className="h-3.5 w-3.5" />
+                Enrolled {new Date(enrolledDate).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </div>
+      <div className="p-4 pt-0 space-y-2">
+        {isCompleted && cert && (
           <Button
             size="sm"
+            variant="outline"
+            className="w-full text-xs gap-1.5 border-[#005a87]/40 text-[#005a87] hover:bg-[#005a87]/10 dark:text-cyan-400"
+            onClick={() => window.open(`${getApiBase()}/api/certificates/${encodeURIComponent(cert.certificateCode)}/view`, "_blank", "noopener,noreferrer")}
+          >
+            <Award className="h-3.5 w-3.5" /> View Certificate
+          </Button>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            size="sm"
+            className="flex-1"
             onClick={() => {
               window.location.href = `/courses/${courseId}`;
             }}
           >
-            Go to course
+            {isCompleted ? "Review Course" : "Continue"}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={cancelMutation.isPending}
-            onClick={() => cancelMutation.mutate(courseId)}
-          >
-            Cancel
-          </Button>
+          {!isCompleted && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate(courseId)}
+            >
+              Cancel
+            </Button>
+          )}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

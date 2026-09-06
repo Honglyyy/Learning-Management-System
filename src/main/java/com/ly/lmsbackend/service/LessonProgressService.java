@@ -5,6 +5,7 @@ import com.ly.lmsbackend.dto.lessondtos.LessonProgressDTO;
 import com.ly.lmsbackend.dto.lessondtos.LessonStatusDTO;
 import com.ly.lmsbackend.model.*;
 import com.ly.lmsbackend.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,8 @@ public class LessonProgressService {
     private final EnrollmentRepository enrollmentRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
+    private final ProgressService progressService;
 
     public LessonProgressService(
             LessonProgressRepository lessonProgressRepository,
@@ -32,12 +35,28 @@ public class LessonProgressService {
             CourseRepository courseRepository,
             UserRepository userRepository
     ) {
+        this(lessonProgressRepository, lessonRepository, studentRepository, enrollmentRepository, courseRepository, userRepository, null, null);
+    }
+
+    @Autowired
+    public LessonProgressService(
+            LessonProgressRepository lessonProgressRepository,
+            LessonRepository lessonRepository,
+            StudentRepository studentRepository,
+            EnrollmentRepository enrollmentRepository,
+            CourseRepository courseRepository,
+            UserRepository userRepository,
+            ActivityLogService activityLogService,
+            ProgressService progressService
+    ) {
         this.lessonProgressRepository = lessonProgressRepository;
         this.lessonRepository = lessonRepository;
         this.studentRepository = studentRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
+        this.progressService = progressService;
     }
 
     @Transactional
@@ -58,6 +77,23 @@ public class LessonProgressService {
         progress.setCompletedAt(new Timestamp(System.currentTimeMillis()));
 
         LessonProgress saved = lessonProgressRepository.save(progress);
+
+        Courses course = lesson.getSection() != null ? lesson.getSection().getCourse() : null;
+        if (student.getUser() != null) {
+            String courseTitle = course != null ? " in " + course.getTitle() : "";
+            if (activityLogService != null) {
+                activityLogService.logActivity(
+                        student.getUser(),
+                        "LESSON_COMPLETED",
+                        "Completed lesson: " + lesson.getTitle() + courseTitle
+                );
+            }
+
+            if (course != null && progressService != null) {
+                progressService.checkCourseCompletion(student.getUser(), course);
+            }
+        }
+
         return toDTO(saved);
     }
 

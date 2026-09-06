@@ -13,6 +13,7 @@ import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.EnrollmentRepository;
 import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,8 @@ public class EnrollmentService {
     private final CourseRepository courseRepository;
     private final EnrollmentMapper enrollmentMapper;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final ActivityLogService activityLogService;
+    private final NotificationService notificationService;
 
     public EnrollmentService(
             EnrollmentRepository enrollmentRepository,
@@ -35,11 +38,26 @@ public class EnrollmentService {
             EnrollmentMapper enrollmentMapper,
             QuizAttemptRepository quizAttemptRepository
     ) {
+        this(enrollmentRepository, userRepository, courseRepository, enrollmentMapper, quizAttemptRepository, null, null);
+    }
+
+    @Autowired
+    public EnrollmentService(
+            EnrollmentRepository enrollmentRepository,
+            UserRepository userRepository,
+            CourseRepository courseRepository,
+            EnrollmentMapper enrollmentMapper,
+            QuizAttemptRepository quizAttemptRepository,
+            ActivityLogService activityLogService,
+            NotificationService notificationService
+    ) {
         this.enrollmentRepository = enrollmentRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.enrollmentMapper = enrollmentMapper;
         this.quizAttemptRepository = quizAttemptRepository;
+        this.activityLogService = activityLogService;
+        this.notificationService = notificationService;
     }
 
     public EnrollmentResponseDTO enrollCurrentUser(EnrollmentCreateDTO dto, String email) {
@@ -56,7 +74,14 @@ public class EnrollmentService {
             }
 
             existingEnrollment.setStatus(EnrollmentStatus.ACTIVE);
-            return enrollmentMapper.toDTO(enrollmentRepository.save(existingEnrollment));
+            Enrollments saved = enrollmentRepository.save(existingEnrollment);
+            if (activityLogService != null) {
+                activityLogService.logActivity(user, "ENROLLED", "Re-enrolled in course: " + course.getTitle());
+            }
+            if (notificationService != null) {
+                notificationService.sendNotification(user, "Course Enrollment", "You have re-enrolled in " + course.getTitle(), "COURSE", "/api/courses/" + course.getCourseId());
+            }
+            return enrollmentMapper.toDTO(saved);
         }
 
         Enrollments enrollment = new Enrollments();
@@ -64,7 +89,15 @@ public class EnrollmentService {
         enrollment.setCourse(course);
         enrollment.setStatus(EnrollmentStatus.ACTIVE);
 
-        return enrollmentMapper.toDTO(enrollmentRepository.save(enrollment));
+        Enrollments saved = enrollmentRepository.save(enrollment);
+        if (activityLogService != null) {
+            activityLogService.logActivity(user, "ENROLLED", "Enrolled in course: " + course.getTitle());
+        }
+        if (notificationService != null) {
+            notificationService.sendNotification(user, "Welcome to the Course!", "You are now enrolled in " + course.getTitle() + ". Start learning today!", "COURSE", "/api/courses/" + course.getCourseId());
+        }
+
+        return enrollmentMapper.toDTO(saved);
     }
 
     public EnrollmentResponseDTO enrollUser(EnrollmentAdminCreateDTO dto, String managerEmail) {

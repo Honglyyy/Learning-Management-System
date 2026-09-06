@@ -124,6 +124,7 @@ public class StudentService {
                 .educationLevel(student.getEducationLevel())
                 .profilePhotoUrl(student.getProfilePhotoUrl())
                 .profilePhotoPublicId(student.getProfilePhotoPublicId())
+                .totalPoints(student.getTotalPoints() != null ? student.getTotalPoints() : 0.0)
                 .createdAt(student.getCreatedAt())
                 .updatedAt(student.getUpdatedAt())
                 .build();

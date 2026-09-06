@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyOtpRouteImport } from './routes/verify-otp'
+import { Route as VerifyCertificateRouteImport } from './routes/verify-certificate'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -27,6 +28,11 @@ import { Route as LessonsLessonIdQuizRouteImport } from './routes/lessons.$lesso
 const VerifyOtpRoute = VerifyOtpRouteImport.update({
   id: '/verify-otp',
   path: '/verify-otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyCertificateRoute = VerifyCertificateRouteImport.update({
+  id: '/verify-certificate',
+  path: '/verify-certificate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-certificate': typeof VerifyCertificateRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/courses/$id': typeof CoursesIdRoute
   '/my/enrollments': typeof MyEnrollmentsRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-certificate': typeof VerifyCertificateRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/courses/$id': typeof CoursesIdRoute
   '/my/enrollments': typeof MyEnrollmentsRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/verify-certificate': typeof VerifyCertificateRoute
   '/verify-otp': typeof VerifyOtpRoute
   '/courses/$id': typeof CoursesIdRoute
   '/my/enrollments': typeof MyEnrollmentsRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/reset-password'
+    | '/verify-certificate'
     | '/verify-otp'
     | '/courses/$id'
     | '/my/enrollments'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/reset-password'
+    | '/verify-certificate'
     | '/verify-otp'
     | '/courses/$id'
     | '/my/enrollments'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/register'
     | '/reset-password'
+    | '/verify-certificate'
     | '/verify-otp'
     | '/courses/$id'
     | '/my/enrollments'
@@ -203,6 +215,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  VerifyCertificateRoute: typeof VerifyCertificateRoute
   VerifyOtpRoute: typeof VerifyOtpRoute
   CoursesIdRoute: typeof CoursesIdRoute
   MyEnrollmentsRoute: typeof MyEnrollmentsRoute
@@ -219,6 +232,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-otp'
       fullPath: '/verify-otp'
       preLoaderRoute: typeof VerifyOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-certificate': {
+      id: '/verify-certificate'
+      path: '/verify-certificate'
+      fullPath: '/verify-certificate'
+      preLoaderRoute: typeof VerifyCertificateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -323,6 +343,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  VerifyCertificateRoute: VerifyCertificateRoute,
   VerifyOtpRoute: VerifyOtpRoute,
   CoursesIdRoute: CoursesIdRoute,
   MyEnrollmentsRoute: MyEnrollmentsRoute,

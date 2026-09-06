@@ -14,7 +14,24 @@ import { Badge } from "@/components/ui/badge";
 import { ApiAlert } from "@/components/ApiAlert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { User, Camera, Lock, Save, ShieldCheck, GraduationCap, Calendar, IdCard } from "lucide-react";
+import {
+  User,
+  Camera,
+  Lock,
+  Save,
+  ShieldCheck,
+  GraduationCap,
+  Calendar,
+  IdCard,
+  Trophy,
+  Award,
+  BookOpen,
+  CheckCircle2,
+  FileText,
+  Star,
+  Clock,
+  History,
+} from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "My Profile — Lumen LMS" }] }),
@@ -37,8 +54,16 @@ type StudentProfile = {
   educationLevel?: string;
   profilePhotoUrl?: string;
   profilePhotoPublicId?: string;
+  totalPoints?: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+type ActivityLog = {
+  activityId: number;
+  activityType: string;
+  description: string;
+  timestamp: string;
 };
 
 function ProfilePage() {
@@ -50,6 +75,12 @@ function ProfilePage() {
   const { data: profile, isLoading, error } = useQuery<StudentProfile>({
     queryKey: ["student-profile"],
     queryFn: () => api<StudentProfile>("/api/students/profile"),
+    enabled: isStudentOrUser,
+  });
+
+  const activitiesQuery = useQuery<ActivityLog[]>({
+    queryKey: ["user-activities"],
+    queryFn: () => api<ActivityLog[]>("/api/users/activities", { auth: true }).catch(() => []),
     enabled: isStudentOrUser,
   });
 
@@ -211,6 +242,10 @@ function ProfilePage() {
                             {profile.studentCode}
                           </Badge>
                         )}
+                        <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 text-xs gap-1 font-semibold">
+                          <Trophy className="h-3 w-3 text-amber-500" />
+                          {profile?.totalPoints ?? 0} Lifetime Points
+                        </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {uploadingPhoto ? "Uploading photo..." : "Upload JPG, PNG or WebP image."}
@@ -353,6 +388,67 @@ function ProfilePage() {
                 You are signed in with an administrative or teaching role ({email}).
               </CardDescription>
             </CardHeader>
+          </Card>
+        )}
+
+        {/* Activity Timeline Card */}
+        {isStudentOrUser && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" /> Learning Activity Timeline
+              </CardTitle>
+              <CardDescription>Review your recent milestones, completions, and submissions.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activitiesQuery.isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (activitiesQuery.data?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No activities recorded yet. Start learning to build your activity history!
+                </p>
+              ) : (
+                <div className="relative border-l border-border ml-3 space-y-6 py-2">
+                  {activitiesQuery.data?.slice(0, 10).map((act) => {
+                    const iconMap: Record<string, any> = {
+                      ENROLLED: BookOpen,
+                      LESSON_COMPLETED: CheckCircle2,
+                      QUIZ_ATTEMPT: Trophy,
+                      ASSIGNMENT_SUBMITTED: FileText,
+                      ASSIGNMENT_GRADED: Star,
+                      COURSE_COMPLETED: Award,
+                    };
+                    const colorMap: Record<string, string> = {
+                      ENROLLED: "bg-blue-500",
+                      LESSON_COMPLETED: "bg-emerald-500",
+                      QUIZ_ATTEMPT: "bg-amber-500",
+                      ASSIGNMENT_SUBMITTED: "bg-indigo-500",
+                      ASSIGNMENT_GRADED: "bg-purple-500",
+                      COURSE_COMPLETED: "bg-yellow-500",
+                    };
+                    const Icon = iconMap[act.activityType] || Clock;
+                    const dotColor = colorMap[act.activityType] || "bg-muted-foreground";
+
+                    return (
+                      <div key={act.activityId} className="relative pl-6">
+                        <div className={`absolute -left-2 top-1 h-4 w-4 rounded-full ${dotColor} flex items-center justify-center text-white ring-4 ring-background`}>
+                          <Icon className="h-2.5 w-2.5" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium text-foreground">{act.description}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {act.timestamp ? new Date(act.timestamp).toLocaleString() : ""}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
           </Card>
         )}
 

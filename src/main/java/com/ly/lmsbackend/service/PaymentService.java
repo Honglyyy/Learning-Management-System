@@ -12,6 +12,7 @@ import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.PaymentRepository;
 import com.ly.lmsbackend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -27,6 +28,24 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final EnrollmentService enrollmentService;
     private final PaymentMapper paymentMapper;
+    private final EmailService emailService;
+
+    @Autowired
+    public PaymentService(
+            PaymentRepository paymentRepository,
+            CourseRepository courseRepository,
+            UserRepository userRepository,
+            EnrollmentService enrollmentService,
+            PaymentMapper paymentMapper,
+            EmailService emailService
+    ) {
+        this.paymentRepository = paymentRepository;
+        this.courseRepository = courseRepository;
+        this.userRepository = userRepository;
+        this.enrollmentService = enrollmentService;
+        this.paymentMapper = paymentMapper;
+        this.emailService = emailService;
+    }
 
     public PaymentService(
             PaymentRepository paymentRepository,
@@ -35,11 +54,7 @@ public class PaymentService {
             EnrollmentService enrollmentService,
             PaymentMapper paymentMapper
     ) {
-        this.paymentRepository = paymentRepository;
-        this.courseRepository = courseRepository;
-        this.userRepository = userRepository;
-        this.enrollmentService = enrollmentService;
-        this.paymentMapper = paymentMapper;
+        this(paymentRepository, courseRepository, userRepository, enrollmentService, paymentMapper, null);
     }
 
     public PaymentResponseDTO createCheckout(PaymentCheckoutRequestDTO dto, String email) {
@@ -81,6 +96,7 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PAID);
         Payments saved = paymentRepository.save(payment);
         enrollIfNeeded(saved, saved.getUser().getEmail());
+        notifyStudentAbaPaymentApproved(saved);
 
         return paymentMapper.toDTO(saved);
     }
@@ -110,6 +126,7 @@ public class PaymentService {
         Payments saved = paymentRepository.save(payment);
         if (status == PaymentStatus.PAID && previousStatus != PaymentStatus.PAID) {
             enrollIfNeeded(saved, saved.getUser().getEmail());
+            notifyStudentAbaPaymentApproved(saved);
         }
 
         return paymentMapper.toDTO(saved);
@@ -136,6 +153,46 @@ public class PaymentService {
             if (!exception.getStatusCode().equals(HttpStatus.CONFLICT)) {
                 throw exception;
             }
+        }
+    }
+
+    private void notifyStudentAbaPaymentApproved(Payments payment) {
+        if (emailService == null || payment == null || payment.getUser() == null) {
+            return;
+        }
+        try {
+            Users student = payment.getUser();
+            Courses course = payment.getCourse();
+            String studentName = (student.getStudent() != null && student.getStudent().getFullName() != null)
+                    ? student.getStudent().getFullName()
+                    : (student.getFullname() != null ? student.getFullname() : student.getUsername());
+
+            String courseTitle = course != null ? course.getTitle() : "Course";
+            String instructorName = "Lumen Instructor";
+            if (course != null && course.getInstructor() != null) {
+                Users inst = course.getInstructor();
+                instructorName = (inst.getInstructor() != null && inst.getInstructor().getFullName() != null)
+                        ? inst.getInstructor().getFullName()
+                        : (inst.getFullname() != null ? inst.getFullname() : inst.getUsername());
+            }
+
+            String amount = payment.getAmount() != null ? payment.getAmount().toPlainString() : "0.00";
+            String txnRef = payment.getProviderReference() != null ? payment.getProviderReference() : "ABA-" + payment.getPaymentId();
+            String enrollmentDate = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(new java.util.Date());
+            Long courseId = course != null ? course.getCourseId() : null;
+            String courseUrl = courseId != null ? "http://localhost:5173/courses/" + courseId : "http://localhost:5173/my/enrollments";
+
+            emailService.sendAbaPayWayEnrollmentSuccess(
+                    student.getEmail(),
+                    studentName,
+                    courseTitle,
+                    instructorName,
+                    amount,
+                    txnRef,
+                    enrollmentDate,
+                    courseUrl
+            );
+        } catch (Exception ignored) {
         }
     }
 }

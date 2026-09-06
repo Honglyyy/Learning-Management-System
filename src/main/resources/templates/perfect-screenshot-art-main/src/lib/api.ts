@@ -87,9 +87,11 @@ export async function api<T = any>(path: string, opts: ApiOptions = {}): Promise
   let body: BodyInit | undefined;
   if (opts.formData) {
     body = opts.formData;
+  } else if (typeof FormData !== "undefined" && opts.body instanceof FormData) {
+    body = opts.body;
   } else if (opts.body !== undefined) {
     headers["Content-Type"] = "application/json";
-    body = JSON.stringify(opts.body);
+    body = typeof opts.body === "string" ? opts.body : JSON.stringify(opts.body);
   }
   const res = await fetch(url, { method: opts.method || "GET", headers, body });
   const ct = res.headers.get("content-type") || "";

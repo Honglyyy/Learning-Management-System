@@ -20,14 +20,14 @@ import { CrudPanel } from "@/components/CrudPanel";
 import { MultiSelect } from "@/components/MultiSelect";
 import { SelectFetch } from "@/components/SelectFetch";
 import { toast } from "sonner";
-import { LayoutDashboard, BookOpen, FolderTree, Layers, FileVideo, ListChecks, HelpCircle, CheckSquare, CreditCard, Users, Shield, Plus, Trash2, Upload, Check } from "lucide-react";
+import { LayoutDashboard, BookOpen, FolderTree, Layers, FileVideo, ListChecks, HelpCircle, CheckSquare, CreditCard, Users, Shield, Plus, Trash2, Upload, Check, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Admin dashboard — Lumen LMS" }] }),
   component: () => <RequireRole roles={["ADMIN"]}><AdminPage /></RequireRole>,
 });
 
-type Section = "overview" | "courses" | "categories" | "sections" | "lessons" | "quizzes" | "questions" | "answers" | "payments" | "enrollments" | "users" | "admins";
+type Section = "overview" | "courses" | "categories" | "sections" | "lessons" | "assignments" | "quizzes" | "questions" | "answers" | "payments" | "enrollments" | "users" | "admins";
 
 function AdminPage() {
   const [section, setSection] = useState<Section>("overview");
@@ -39,6 +39,7 @@ function AdminPage() {
     { key: "courses", label: "Courses", icon: BookOpen },
     { key: "sections", label: "Sections", icon: Layers },
     { key: "lessons", label: "Lessons", icon: FileVideo },
+    { key: "assignments", label: "Assignments", icon: FileText },
     { key: "quizzes", label: "Quizzes", icon: ListChecks },
     { key: "questions", label: "Questions", icon: HelpCircle },
     { key: "answers", label: "Answers", icon: CheckSquare },
@@ -78,6 +79,7 @@ function AdminPage() {
           }} />}
           {section === "sections" && <SectionPanel />}
           {section === "lessons" && <AdminLessons />}
+          {section === "assignments" && <AdminAssignments />}
           {section === "quizzes" && <QuizPanel />}
           {section === "questions" && <QuestionPanel />}
           {section === "answers" && <AnswerPanel />}
@@ -1366,3 +1368,350 @@ function AdminUsers() {
       </div>
   );
 }
+
+function AdminAssignments() {
+  const qc = useQueryClient();
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [submissionsAssignment, setSubmissionsAssignment] = useState<any>(null);
+  const [gradingSubmission, setGradingSubmission] = useState<any>(null);
+  const [score, setScore] = useState<string>("");
+  const [grade, setGrade] = useState<string>("");
+  const [feedback, setFeedback] = useState<string>("");
+  const [gradingPending, setGradingPending] = useState(false);
+
+  const coursesQuery = useQuery<any[]>({
+    queryKey: ["admin-courses"],
+    queryFn: () => api("/api/courses", { auth: false }),
+  });
+
+  const activeCourseId = selectedCourseId || (coursesQuery.data && coursesQuery.data.length > 0 ? String(coursesQuery.data[0].courseId) : "");
+
+  const assignmentsQuery = useQuery<any[]>({
+    queryKey: ["admin-course-assignments", activeCourseId],
+    queryFn: () => api(`/api/courses/${activeCourseId}/assignments`),
+    enabled: Boolean(activeCourseId),
+  });
+
+  const submissionsQuery = useQuery<any[]>({
+    queryKey: ["admin-assignment-submissions", submissionsAssignment?.assignmentId],
+    queryFn: () => api(`/api/assignments/${submissionsAssignment.assignmentId}/submissions`),
+    enabled: Boolean(submissionsAssignment),
+  });
+
+  const deleteAssignment = useMutation({
+    mutationFn: (id: number) => api(`/api/assignments/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Assignment deleted successfully");
+      qc.invalidateQueries({ queryKey: ["admin-course-assignments", activeCourseId] });
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to delete assignment"),
+  });
+
+  const handleGradeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gradingSubmission) return;
+    setGradingPending(true);
+    try {
+      await api(`/api/assignments/submissions/${gradingSubmission.submissionId}/grade`, {
+        method: "PUT",
+        body: {
+          score: score !== "" ? Number(score) : null,
+          grade: grade.trim() || null,
+          feedback: feedback.trim() || null,
+        },
+      });
+      toast.success("Submission graded successfully");
+      setGradingSubmission(null);
+      qc.invalidateQueries({ queryKey: ["admin-assignment-submissions", submissionsAssignment?.assignmentId] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to grade submission");
+    } finally {
+      setGradingPending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold">Course Assignments Management</h2>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs whitespace-nowrap">Filter Course:</Label>
+          <Select value={activeCourseId} onValueChange={(val) => setSelectedCourseId(val)}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Select course..." />
+            </SelectTrigger>
+            <SelectContent>
+              {coursesQuery.data?.map((c) => (
+                <SelectItem key={c.courseId} value={String(c.courseId)}>
+                  {c.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {assignmentsQuery.isLoading ? (
+        <Skeleton className="h-40 w-full" />
+      ) : !assignmentsQuery.data || assignmentsQuery.data.length === 0 ? (
+        <div className="rounded-md border p-8 text-center text-muted-foreground bg-card">
+          No assignments found for this course.
+        </div>
+      ) : (
+        <div className="rounded-md border bg-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Section</TableHead>
+                <TableHead>Due Date</TableHead>
+                <TableHead>Max Score</TableHead>
+                <TableHead>Resubmission</TableHead>
+                <TableHead>Attachment</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assignmentsQuery.data.map((a: any) => (
+                <TableRow key={a.assignmentId}>
+                  <TableCell>{a.assignmentId}</TableCell>
+                  <TableCell className="font-semibold">{a.title}</TableCell>
+                  <TableCell className="text-muted-foreground">{a.sectionTitle || "—"}</TableCell>
+                  <TableCell className="text-xs">
+                    {a.dueDate ? new Date(a.dueDate).toLocaleDateString() : "—"}
+                  </TableCell>
+                  <TableCell>{a.maxScore} pts</TableCell>
+                  <TableCell>
+                    <Badge variant={a.allowResubmission ? "secondary" : "outline"} className="text-[10px]">
+                      {a.allowResubmission ? "Allowed" : "One-time"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {a.supportingFileUrl ? (
+                      <a
+                        href={mediaUrl(a.supportingFileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="text-xs text-primary underline"
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs gap-1"
+                      onClick={() => setSubmissionsAssignment(a)}
+                    >
+                      <Users className="h-3.5 w-3.5" /> Submissions
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        if (window.confirm("Delete this assignment?")) {
+                          deleteAssignment.mutate(a.assignmentId);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Submissions Dialog */}
+      {submissionsAssignment && (
+        <Dialog open onOpenChange={() => setSubmissionsAssignment(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Submissions for: {submissionsAssignment.title}</DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Course: {submissionsAssignment.courseTitle} • Max Score: {submissionsAssignment.maxScore} pts
+              </p>
+            </DialogHeader>
+
+            <div className="py-2">
+              {submissionsQuery.isLoading ? (
+                <Skeleton className="h-40 w-full" />
+              ) : !submissionsQuery.data || submissionsQuery.data.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground border rounded-lg">
+                  No students have submitted this assignment yet.
+                </p>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Submitted At</TableHead>
+                        <TableHead>Submission</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Score & Grade</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {submissionsQuery.data.map((s: any) => (
+                        <TableRow key={s.submissionId}>
+                          <TableCell>
+                            <p className="font-semibold text-sm">{s.studentName || "Student"}</p>
+                            <p className="text-xs text-muted-foreground">{s.studentEmail}</p>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "—"}
+                          </TableCell>
+                          <TableCell className="max-w-xs">
+                            {s.textSubmission && (
+                              <p className="text-xs line-clamp-2 font-mono bg-muted/40 p-1 rounded">
+                                {s.textSubmission}
+                              </p>
+                            )}
+                            {s.fileUrl && (
+                              <a
+                                href={mediaUrl(s.fileUrl)}
+                                target="_blank"
+                                rel="noreferrer"
+                                download
+                                className="text-xs text-primary underline block mt-1"
+                              >
+                                Download Attached File
+                              </a>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                s.status === "GRADED"
+                                  ? "default"
+                                  : s.status === "LATE"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                            >
+                              {s.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {s.score != null ? (
+                              <div>
+                                <span className="font-bold text-sm">
+                                  {s.score} / {submissionsAssignment.maxScore}
+                                </span>
+                                {s.grade && (
+                                  <Badge className="ml-1.5 text-[10px] bg-emerald-600">{s.grade}</Badge>
+                                )}
+                                {s.feedback && (
+                                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                    "{s.feedback}"
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">Not graded</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => {
+                                setGradingSubmission(s);
+                                setScore(s.score != null ? String(s.score) : "");
+                                setGrade(s.grade || "");
+                                setFeedback(s.feedback || "");
+                              }}
+                            >
+                              {s.status === "GRADED" ? "Update Grade" : "Grade"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setSubmissionsAssignment(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Grade Dialog */}
+      {gradingSubmission && (
+        <Dialog open onOpenChange={() => setGradingSubmission(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Grade Student Submission</DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Student: {gradingSubmission.studentName} ({gradingSubmission.studentEmail})
+              </p>
+            </DialogHeader>
+            <form onSubmit={handleGradeSubmit} className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Score (Max: {submissionsAssignment?.maxScore})</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    min={0}
+                    max={submissionsAssignment?.maxScore}
+                    required
+                    value={score}
+                    onChange={(e) => setScore(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Grade (Optional)</Label>
+                  <Input
+                    placeholder="A, B, C, D, F"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value.toUpperCase())}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Feedback</Label>
+                <Textarea
+                  placeholder="Feedback for the student..."
+                  rows={3}
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <DialogFooter className="gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setGradingSubmission(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={gradingPending}>
+                  {gradingPending ? "Saving..." : "Save Grade"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+

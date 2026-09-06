@@ -88,6 +88,7 @@ import {
     Paperclip,
     FileText,
     Download,
+    ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/instructor/")({
@@ -110,12 +111,16 @@ function Page() {
                 <Tabs defaultValue="courses">
                     <TabsList>
                         <TabsTrigger value="courses">My Courses</TabsTrigger>
+                        <TabsTrigger value="assignments">Assignments & Grading</TabsTrigger>
                         <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
                         <TabsTrigger value="profile">Profile & Bio</TabsTrigger>
                         <TabsTrigger value="security">Security</TabsTrigger>
                     </TabsList>
                     <TabsContent value="courses">
                         <MyCourses />
+                    </TabsContent>
+                    <TabsContent value="assignments">
+                        <InstructorAssignmentsTab />
                     </TabsContent>
                     <TabsContent value="enrollments">
                         <InstructorEnrollments />
@@ -2644,3 +2649,727 @@ function InstructorSecurityTab() {
         </Card>
     );
 }
+
+// ---------------------------------------------------------------------------
+// Assignments & Grading System (Stage 3)
+// ---------------------------------------------------------------------------
+
+function InstructorAssignmentsTab() {
+    const qc = useQueryClient();
+    const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [editAssignment, setEditAssignment] = useState<any>(null);
+    const [submissionsAssignment, setSubmissionsAssignment] = useState<any>(null);
+
+    const { data: courses, isLoading: loadingCourses } = useQuery<any[]>({
+        queryKey: ["instructor-courses"],
+        queryFn: () => api("/api/courses/instructor/me"),
+    });
+
+    const activeCourseId = selectedCourseId || (courses && courses.length > 0 ? String(courses[0].courseId) : "");
+
+    const { data: assignments, isLoading: loadingAssignments } = useQuery<any[]>({
+        queryKey: ["course-assignments", activeCourseId],
+        queryFn: () => api(`/api/courses/${activeCourseId}/assignments`),
+        enabled: Boolean(activeCourseId),
+    });
+
+    const selectedCourse = courses?.find((c) => String(c.courseId) === activeCourseId);
+
+    const deleteMutation = useMutation({
+        mutationFn: (assignmentId: number) =>
+            api(`/api/assignments/${assignmentId}`, { method: "DELETE" }),
+        onSuccess: () => {
+            toast.success("Assignment deleted successfully");
+            qc.invalidateQueries({ queryKey: ["course-assignments", activeCourseId] });
+        },
+        onError: (err: any) => toast.error(err.message || "Failed to delete assignment"),
+    });
+
+    const handleDelete = (id: number) => {
+        if (window.confirm("Are you sure you want to delete this assignment and all student submissions?")) {
+            deleteMutation.mutate(id);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <Label className="text-sm font-semibold whitespace-nowrap">Select Course:</Label>
+                    <Select
+                        value={activeCourseId}
+                        onValueChange={(val) => setSelectedCourseId(val)}
+                        disabled={loadingCourses || !courses || courses.length === 0}
+                    >
+                        <SelectTrigger className="w-[280px]">
+                            <SelectValue placeholder="Choose a course..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {courses?.map((c) => (
+                                <SelectItem key={c.courseId} value={String(c.courseId)}>
+                                    {c.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {activeCourseId && (
+                    <Button onClick={() => setCreateDialogOpen(true)} className="gap-1.5 shrink-0">
+                        <Plus className="h-4 w-4" /> Create Assignment
+                    </Button>
+                )}
+            </div>
+
+            {loadingCourses ? (
+                <Skeleton className="h-32 w-full" />
+            ) : !courses || courses.length === 0 ? (
+                <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                        You have no courses yet. Create a course first to add assignments.
+                    </CardContent>
+                </Card>
+            ) : !activeCourseId ? (
+                <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                        Please select a course above to view its assignments.
+                    </CardContent>
+                </Card>
+            ) : loadingAssignments ? (
+                <Skeleton className="h-40 w-full" />
+            ) : !assignments || assignments.length === 0 ? (
+                <Card>
+                    <CardContent className="py-12 text-center space-y-3">
+                        <FileText className="h-10 w-10 mx-auto text-muted-foreground/60" />
+                        <h3 className="font-semibold text-lg">No Assignments Found</h3>
+                        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                            Add tasks, homework, or projects with due dates and grading criteria for your students.
+                        </p>
+                        <Button onClick={() => setCreateDialogOpen(true)} variant="outline" className="gap-1.5 mt-2">
+                            <Plus className="h-4 w-4" /> Create First Assignment
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {assignments.map((assign: any) => {
+                        const isPastDue = assign.dueDate && new Date(assign.dueDate).getTime() < Date.now();
+                        return (
+                            <Card key={assign.assignmentId} className="flex flex-col justify-between">
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <CardTitle className="text-base font-bold line-clamp-1">
+                                            {assign.title}
+                                        </CardTitle>
+                                        <Badge
+                                            variant={isPastDue ? "destructive" : "secondary"}
+                                            className="text-[10px] shrink-0"
+                                        >
+                                            {assign.dueDate
+                                                ? new Date(assign.dueDate).toLocaleDateString()
+                                                : "No Due Date"}
+                                        </Badge>
+                                    </div>
+                                    {assign.sectionTitle && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Section: {assign.sectionTitle}
+                                        </p>
+                                    )}
+                                </CardHeader>
+
+                                <CardContent className="space-y-3 flex-1 pb-3">
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                        {assign.description || "No description provided."}
+                                    </p>
+
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pt-1 border-t">
+                                        <span className="font-medium text-foreground">Max: {assign.maxScore} pts</span>
+                                        <span>•</span>
+                                        <span>{assign.allowResubmission ? "Resubmission On" : "Single Submission"}</span>
+                                    </div>
+
+                                    {assign.supportingFileUrl && (
+                                        <div className="pt-1">
+                                            <a
+                                                href={mediaUrl(assign.supportingFileUrl)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                download
+                                                className="text-xs text-primary underline flex items-center gap-1 hover:text-primary/80"
+                                            >
+                                                <Paperclip className="h-3 w-3" /> Attached Document
+                                            </a>
+                                        </div>
+                                    )}
+                                </CardContent>
+
+                                <div className="p-4 pt-0 border-t flex items-center justify-between gap-2 mt-auto">
+                                    <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="gap-1 text-xs flex-1"
+                                        onClick={() => setSubmissionsAssignment(assign)}
+                                    >
+                                        <Users className="h-3.5 w-3.5" /> Submissions
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 w-8 p-0"
+                                        title="Edit assignment"
+                                        onClick={() => setEditAssignment(assign)}
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                                        title="Delete assignment"
+                                        onClick={() => handleDelete(assign.assignmentId)}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Create Assignment Dialog */}
+            {createDialogOpen && selectedCourse && (
+                <AssignmentFormDialog
+                    course={selectedCourse}
+                    onClose={() => setCreateDialogOpen(false)}
+                    onSaved={() => {
+                        setCreateDialogOpen(false);
+                        qc.invalidateQueries({ queryKey: ["course-assignments", activeCourseId] });
+                    }}
+                />
+            )}
+
+            {/* Edit Assignment Dialog */}
+            {editAssignment && selectedCourse && (
+                <AssignmentFormDialog
+                    course={selectedCourse}
+                    assignment={editAssignment}
+                    onClose={() => setEditAssignment(null)}
+                    onSaved={() => {
+                        setEditAssignment(null);
+                        qc.invalidateQueries({ queryKey: ["course-assignments", activeCourseId] });
+                    }}
+                />
+            )}
+
+            {/* Submissions Inspection Dialog */}
+            {submissionsAssignment && (
+                <AssignmentSubmissionsDialog
+                    assignment={submissionsAssignment}
+                    onClose={() => setSubmissionsAssignment(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+function AssignmentFormDialog({
+    course,
+    assignment,
+    onClose,
+    onSaved,
+}: {
+    course: any;
+    assignment?: any;
+    onClose: () => void;
+    onSaved: () => void;
+}) {
+    const isEdit = Boolean(assignment);
+    const [title, setTitle] = useState(assignment?.title || "");
+    const [sectionId, setSectionId] = useState<string>(assignment?.sectionId ? String(assignment.sectionId) : "none");
+    const [description, setDescription] = useState(assignment?.description || "");
+    const [instructions, setInstructions] = useState(assignment?.instructions || "");
+    const [startDate, setStartDate] = useState(
+        assignment?.startDate ? new Date(assignment.startDate).toISOString().slice(0, 16) : ""
+    );
+    const [dueDate, setDueDate] = useState(
+        assignment?.dueDate ? new Date(assignment.dueDate).toISOString().slice(0, 16) : ""
+    );
+    const [maxScore, setMaxScore] = useState(String(assignment?.maxScore ?? 100));
+    const [allowResubmission, setAllowResubmission] = useState(assignment?.allowResubmission ?? true);
+    const [file, setFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!title.trim()) {
+            toast.error("Assignment title is required");
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            let supportingFileUrl = assignment?.supportingFileUrl || null;
+            let supportingFilePublicId = assignment?.supportingFilePublicId || null;
+
+            if (file) {
+                setUploading(true);
+                const formData = new FormData();
+                formData.append("file", file);
+                const res = await api<any>("/api/uploads/assignment-file", {
+                    method: "POST",
+                    formData,
+                });
+                supportingFileUrl = res.url;
+                supportingFilePublicId = res.publicId;
+                setUploading(false);
+            }
+
+            const body: any = {
+                courseId: course.courseId,
+                sectionId: sectionId === "none" ? null : Number(sectionId),
+                title: title.trim(),
+                description: description.trim() || null,
+                instructions: instructions.trim() || null,
+                startDate: startDate ? new Date(startDate).toISOString() : null,
+                dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+                maxScore: Number(maxScore) > 0 ? Number(maxScore) : 100,
+                supportingFileUrl,
+                supportingFilePublicId,
+                allowResubmission,
+            };
+
+            if (isEdit) {
+                await api(`/api/assignments/${assignment.assignmentId}`, {
+                    method: "PUT",
+                    body,
+                });
+                toast.success("Assignment updated successfully");
+            } else {
+                await api("/api/assignments", {
+                    method: "POST",
+                    body,
+                });
+                toast.success("Assignment created successfully");
+            }
+
+            onSaved();
+        } catch (err: any) {
+            toast.error(err.message || "Failed to save assignment");
+        } finally {
+            setSubmitting(false);
+            setUploading(false);
+        }
+    };
+
+    return (
+        <Dialog open onOpenChange={() => onClose()}>
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>{isEdit ? "Edit Assignment" : "Create New Assignment"}</DialogTitle>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                    <div>
+                        <Label>Title *</Label>
+                        <Input
+                            placeholder="e.g. Final Project: Full Stack LMS"
+                            required
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="mt-1"
+                        />
+                    </div>
+
+                    {course.sections && course.sections.length > 0 && (
+                        <div>
+                            <Label>Course Section (Optional)</Label>
+                            <Select value={sectionId} onValueChange={(val) => setSectionId(val)}>
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue placeholder="No specific section" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No specific section</SelectItem>
+                                    {course.sections.map((s: any) => (
+                                        <SelectItem key={s.sectionId} value={String(s.sectionId)}>
+                                            {s.title}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
+                    <div>
+                        <Label>Description</Label>
+                        <Textarea
+                            placeholder="Brief summary of the assignment goal..."
+                            rows={2}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="mt-1"
+                        />
+                    </div>
+
+                    <div>
+                        <Label>Detailed Instructions</Label>
+                        <Textarea
+                            placeholder="Step-by-step instructions, submission guidelines, grading rubrics..."
+                            rows={4}
+                            value={instructions}
+                            onChange={(e) => setInstructions(e.target.value)}
+                            className="mt-1"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label>Start Date</Label>
+                            <Input
+                                type="datetime-local"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label>Due Date</Label>
+                            <Input
+                                type="datetime-local"
+                                value={dueDate}
+                                onChange={(e) => setDueDate(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 items-center">
+                        <div>
+                            <Label>Maximum Score (pts)</Label>
+                            <Input
+                                type="number"
+                                min={1}
+                                value={maxScore}
+                                onChange={(e) => setMaxScore(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 pt-6">
+                            <Checkbox
+                                id="allowResub"
+                                checked={allowResubmission}
+                                onCheckedChange={(val) => setAllowResubmission(Boolean(val))}
+                            />
+                            <Label htmlFor="allowResub" className="text-sm font-normal cursor-pointer">
+                                Allow Resubmissions
+                            </Label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <Label>Supporting Document / Starter Files (Optional)</Label>
+                        <Input
+                            type="file"
+                            onChange={(e) => setFile(e.target.files?.[0] || null)}
+                            className="mt-1"
+                        />
+                        {assignment?.supportingFileUrl && !file && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Current file attached:{" "}
+                                <a
+                                    href={mediaUrl(assignment.supportingFileUrl)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    download
+                                    className="text-primary underline"
+                                >
+                                    Download Attachment
+                                </a>
+                            </p>
+                        )}
+                    </div>
+
+                    <DialogFooter className="gap-2 pt-2">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={submitting || uploading}>
+                            {uploading ? "Uploading File..." : submitting ? "Saving..." : isEdit ? "Update Assignment" : "Create Assignment"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function AssignmentSubmissionsDialog({
+    assignment,
+    onClose,
+}: {
+    assignment: any;
+    onClose: () => void;
+}) {
+    const qc = useQueryClient();
+    const [gradingSubmission, setGradingSubmission] = useState<any>(null);
+
+    const { data: submissions, isLoading } = useQuery<any[]>({
+        queryKey: ["assignment-submissions", assignment.assignmentId],
+        queryFn: () => api(`/api/assignments/${assignment.assignmentId}/submissions`),
+    });
+
+    const formatDate = (ts: any) => {
+        if (!ts) return "N/A";
+        return new Date(ts).toLocaleString();
+    };
+
+    return (
+        <Dialog open onOpenChange={() => onClose()}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <div className="flex items-center justify-between pr-6">
+                        <div>
+                            <DialogTitle className="text-xl font-bold">
+                                Submissions: {assignment.title}
+                            </DialogTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Max Score: {assignment.maxScore} pts • Due:{" "}
+                                {assignment.dueDate ? formatDate(assignment.dueDate) : "No due date"}
+                            </p>
+                        </div>
+                    </div>
+                </DialogHeader>
+
+                <div className="py-2">
+                    {isLoading ? (
+                        <Skeleton className="h-40 w-full" />
+                    ) : !submissions || submissions.length === 0 ? (
+                        <div className="py-12 text-center text-muted-foreground border rounded-lg">
+                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No students have submitted this assignment yet.</p>
+                        </div>
+                    ) : (
+                        <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Student</TableHead>
+                                        <TableHead>Submitted At</TableHead>
+                                        <TableHead>Submission</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Score & Grade</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {submissions.map((sub) => (
+                                        <TableRow key={sub.submissionId}>
+                                            <TableCell>
+                                                <p className="font-semibold text-sm">{sub.studentName || "Student"}</p>
+                                                <p className="text-xs text-muted-foreground">{sub.studentEmail}</p>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {formatDate(sub.submittedAt)}
+                                            </TableCell>
+                                            <TableCell className="max-w-xs">
+                                                {sub.textSubmission && (
+                                                    <p className="text-xs line-clamp-2 text-foreground font-mono bg-muted/40 p-1 rounded">
+                                                        {sub.textSubmission}
+                                                    </p>
+                                                )}
+                                                {sub.fileUrl && (
+                                                    <a
+                                                        href={mediaUrl(sub.fileUrl)}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        download
+                                                        className="text-xs text-primary underline flex items-center gap-1 mt-1 hover:text-primary/80"
+                                                    >
+                                                        <FileText className="h-3 w-3" /> Download File <ExternalLink className="h-2.5 w-2.5" />
+                                                    </a>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant={
+                                                        sub.status === "GRADED"
+                                                            ? "default"
+                                                            : sub.status === "LATE"
+                                                            ? "destructive"
+                                                            : "secondary"
+                                                    }
+                                                >
+                                                    {sub.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {sub.score != null ? (
+                                                    <div>
+                                                        <span className="font-bold text-sm">
+                                                            {sub.score} / {assignment.maxScore}
+                                                        </span>
+                                                        {sub.grade && (
+                                                            <Badge className="ml-1.5 text-[10px] bg-emerald-600">
+                                                                {sub.grade}
+                                                            </Badge>
+                                                        )}
+                                                        {sub.feedback && (
+                                                            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                                                "{sub.feedback}"
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground italic">Not graded</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    size="sm"
+                                                    variant={sub.status === "GRADED" ? "outline" : "default"}
+                                                    className="text-xs"
+                                                    onClick={() => setGradingSubmission(sub)}
+                                                >
+                                                    {sub.status === "GRADED" ? "Update Grade" : "Grade"}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" size="sm" onClick={onClose}>
+                        Close
+                    </Button>
+                </DialogFooter>
+
+                {gradingSubmission && (
+                    <GradeSubmissionDialog
+                        submission={gradingSubmission}
+                        maxScore={assignment.maxScore}
+                        onClose={() => setGradingSubmission(null)}
+                        onGraded={() => {
+                            setGradingSubmission(null);
+                            qc.invalidateQueries({ queryKey: ["assignment-submissions", assignment.assignmentId] });
+                        }}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function GradeSubmissionDialog({
+    submission,
+    maxScore,
+    onClose,
+    onGraded,
+}: {
+    submission: any;
+    maxScore: number;
+    onClose: () => void;
+    onGraded: () => void;
+}) {
+    const [score, setScore] = useState<string>(submission.score != null ? String(submission.score) : "");
+    const [grade, setGrade] = useState<string>(submission.grade || "");
+    const [feedback, setFeedback] = useState<string>(submission.feedback || "");
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const numScore = score !== "" ? Number(score) : null;
+        if (numScore != null && (numScore < 0 || numScore > maxScore)) {
+            toast.error(`Score must be between 0 and ${maxScore}`);
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            await api(`/api/assignments/submissions/${submission.submissionId}/grade`, {
+                method: "PUT",
+                body: {
+                    score: numScore,
+                    grade: grade.trim() || null,
+                    feedback: feedback.trim() || null,
+                },
+            });
+            toast.success("Submission graded successfully");
+            onGraded();
+        } catch (err: any) {
+            toast.error(err.message || "Failed to grade submission");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open onOpenChange={() => onClose()}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Grade Submission</DialogTitle>
+                    <p className="text-xs text-muted-foreground">
+                        Student: <span className="font-semibold text-foreground">{submission.studentName}</span> (
+                        {submission.studentEmail})
+                    </p>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-4 py-2">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label>Score (Max: {maxScore})</Label>
+                            <Input
+                                type="number"
+                                step="any"
+                                min={0}
+                                max={maxScore}
+                                required
+                                value={score}
+                                onChange={(e) => setScore(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label>Letter Grade (Optional)</Label>
+                            <Input
+                                placeholder="A, B, C, D, F"
+                                value={grade}
+                                onChange={(e) => setGrade(e.target.value.toUpperCase())}
+                                className="mt-1"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                                Auto-calculated if blank
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <Label>Instructor Feedback & Comments</Label>
+                        <Textarea
+                            placeholder="Provide constructive feedback, praise strengths, or indicate areas for improvement..."
+                            rows={4}
+                            value={feedback}
+                            onChange={(e) => setFeedback(e.target.value)}
+                            className="mt-1"
+                        />
+                    </div>
+
+                    <DialogFooter className="gap-2 pt-2">
+                        <Button type="button" variant="outline" onClick={onClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={submitting}>
+                            {submitting ? "Saving Grade..." : "Submit Grade"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+

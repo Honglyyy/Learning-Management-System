@@ -45,6 +45,30 @@ public class FileUploadService {
             "application/octet-stream"
     );
     private static final Set<String> MATERIAL_EXTENSIONS = Set.of("pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "zip");
+    private static final Set<String> ASSIGNMENT_CONTENT_TYPES = Set.of(
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/plain",
+            "text/csv",
+            "text/markdown",
+            "application/json",
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/x-rar-compressed",
+            "application/x-7z-compressed",
+            "application/octet-stream",
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+    );
+    private static final Set<String> ASSIGNMENT_EXTENSIONS = Set.of(
+            "pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "zip", "rar", "7z", "csv", "json", "md", "png", "jpg", "jpeg", "webp"
+    );
 
     private final Cloudinary cloudinary;
     private final long maxImageSize;
@@ -61,6 +85,10 @@ public class FileUploadService {
         this.maxImageSize = maxImageSize;
         this.maxVideoSize = maxVideoSize;
         this.maxMaterialSize = maxMaterialSize;
+    }
+
+    public FileUploadResponseDTO uploadAssignmentFile(MultipartFile file) {
+        return upload(file, "assignment-files", ASSIGNMENT_CONTENT_TYPES, ASSIGNMENT_EXTENSIONS, maxMaterialSize);
     }
 
     public FileUploadResponseDTO uploadMaterial(MultipartFile file) {

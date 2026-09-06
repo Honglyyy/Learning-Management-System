@@ -45,6 +45,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/courses/$id")({
   component: CourseDetail,
@@ -127,6 +130,15 @@ function CourseDetail() {
     queryFn: () => api(`/api/courses/${id}/lessons-status`, { auth: true }).catch(() => []),
     enabled: isAuthenticated && isEnrolled,
   });
+
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+
+  const assignmentsQuery = useQuery<any[]>({
+    queryKey: ["course-assignments", id],
+    queryFn: () => api(`/api/courses/${id}/assignments`, { auth: true }).catch(() => []),
+    enabled: isAuthenticated && isEnrolled,
+  });
+  const assignments = assignmentsQuery.data || [];
 
   const getLessonStatus = (lesson: any) => {
     if (lesson?.isFree) return "INCOMPLETE";
@@ -439,6 +451,62 @@ function CourseDetail() {
                 <p className="text-sm text-muted-foreground">
                   No sections yet.
                 </p>
+            )}
+
+            {/* ================= ASSIGNMENTS ================= */}
+            {isEnrolled && (
+              <div className="mt-10">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" /> Course Assignments ({assignments.length})
+                  </h2>
+                </div>
+
+                {assignments.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {assignments.map((assign: any) => {
+                      const isPastDue = assign.dueDate && new Date(assign.dueDate).getTime() < Date.now();
+                      return (
+                        <Card
+                          key={assign.assignmentId}
+                          className="hover:border-primary/50 transition-colors cursor-pointer"
+                          onClick={() => setSelectedAssignment(assign)}
+                        >
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <CardTitle className="text-base line-clamp-1">{assign.title}</CardTitle>
+                              <Badge variant={isPastDue ? "destructive" : "secondary"} className="shrink-0 text-[10px]">
+                                {assign.dueDate ? new Date(assign.dueDate).toLocaleDateString() : "No Due Date"}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-1 space-y-2">
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {assign.description || "No description provided."}
+                            </p>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                              <span>Max: {assign.maxScore} pts</span>
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-primary px-2">
+                                View & Submit &rarr;
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No assignments for this course yet.</p>
+                )}
+              </div>
+            )}
+
+            {selectedAssignment && (
+              <StudentAssignmentModal
+                assignment={selectedAssignment}
+                isEnrolled={isEnrolled}
+                onClose={() => setSelectedAssignment(null)}
+              />
             )}
 
             {/* ================= LESSON PLAYER MODAL ================= */}
@@ -949,3 +1017,284 @@ function LessonPlayerModal({
     </div>
   );
 }
+
+function StudentAssignmentModal({
+  assignment,
+  isEnrolled,
+  onClose,
+}: {
+  assignment: any;
+  isEnrolled: boolean;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [textSubmission, setTextSubmission] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const subQuery = useQuery<any>({
+    queryKey: ["assignment-my-submission", assignment.assignmentId],
+    queryFn: () => api(`/api/assignments/${assignment.assignmentId}/submission/me`, { auth: true }),
+    enabled: isEnrolled,
+  });
+
+  const submission = subQuery.data;
+  const isSubmitted = submission && submission.status && submission.status !== "NOT_SUBMITTED";
+  const isGraded = submission && (submission.status === "GRADED" || (submission.score !== null && submission.score !== undefined));
+
+  useEffect(() => {
+    if (submission?.textSubmission) {
+      setTextSubmission(submission.textSubmission);
+    }
+  }, [submission]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!textSubmission.trim() && !file && !submission?.fileUrl) {
+      toast.error("Please enter text or upload a file");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let fileUrl = submission?.fileUrl || null;
+      let filePublicId = submission?.filePublicId || null;
+
+      if (file) {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await api<any>("/api/uploads/assignment-file", {
+          method: "POST",
+          formData,
+          auth: true,
+        });
+        fileUrl = res.url;
+        filePublicId = res.publicId;
+        setUploading(false);
+      }
+
+      await api(`/api/assignments/${assignment.assignmentId}/submit`, {
+        method: "POST",
+        body: {
+          textSubmission: textSubmission.trim() || null,
+          fileUrl,
+          filePublicId,
+        },
+        auth: true,
+      });
+
+      toast.success(isSubmitted ? "Assignment resubmitted successfully!" : "Assignment submitted successfully!");
+      qc.invalidateQueries({ queryKey: ["assignment-my-submission", assignment.assignmentId] });
+      qc.invalidateQueries({ queryKey: ["course-assignments"] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit assignment");
+    } finally {
+      setSubmitting(false);
+      setUploading(false);
+    }
+  };
+
+  const formatDate = (ts: any) => {
+    if (!ts) return "No due date";
+    return new Date(ts).toLocaleString();
+  };
+
+  const isPastDue = assignment.dueDate && new Date(assignment.dueDate).getTime() < Date.now();
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{assignment.courseTitle || "Course Assignment"}</Badge>
+            {assignment.dueDate && (
+              <Badge variant={isPastDue ? "destructive" : "secondary"}>
+                Due: {formatDate(assignment.dueDate)}
+              </Badge>
+            )}
+          </div>
+          <DialogTitle className="text-xl font-bold mt-1">{assignment.title}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {assignment.description && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Description</p>
+              <p className="text-sm mt-1 whitespace-pre-line">{assignment.description}</p>
+            </div>
+          )}
+
+          {assignment.instructions && (
+            <div className="rounded-md border p-3 bg-muted/40">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Instructions</p>
+              <p className="text-sm mt-1 whitespace-pre-line">{assignment.instructions}</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+            <div>
+              <span className="font-medium text-foreground">Max Score:</span> {assignment.maxScore} pts
+            </div>
+            <div>
+              <span className="font-medium text-foreground">Resubmissions:</span> {assignment.allowResubmission ? "Allowed" : "One-time only"}
+            </div>
+          </div>
+
+          {assignment.supportingFileUrl && (
+            <div className="flex items-center gap-2 pt-1">
+              <Paperclip className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-xs font-medium">Assignment Attachment:</span>
+              <a
+                href={mediaUrl(assignment.supportingFileUrl)}
+                target="_blank"
+                rel="noreferrer"
+                download
+                className="text-xs text-primary underline font-medium hover:text-primary/80 flex items-center gap-1"
+              >
+                Download Document <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+
+          {/* Submission / Grade Status Banner */}
+          {subQuery.isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : isSubmitted ? (
+            <div className="rounded-lg border p-4 bg-card space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Your Submission</span>
+                <Badge
+                  variant={
+                    submission.status === "GRADED"
+                      ? "default"
+                      : submission.status === "LATE"
+                      ? "destructive"
+                      : "secondary"
+                  }
+                >
+                  {submission.status}
+                </Badge>
+              </div>
+
+              {submission.submittedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Submitted on: {formatDate(submission.submittedAt)}
+                </p>
+              )}
+
+              {submission.textSubmission && (
+                <div className="text-xs mt-1">
+                  <span className="font-medium text-muted-foreground">Submitted Text:</span>
+                  <p className="mt-0.5 whitespace-pre-line bg-muted/30 p-2 rounded border">{submission.textSubmission}</p>
+                </div>
+              )}
+
+              {submission.fileUrl && (
+                <div className="text-xs pt-1">
+                  <span className="font-medium">Submitted file:</span>{" "}
+                  <a
+                    href={mediaUrl(submission.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    className="text-primary underline hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    View / Download File <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+
+              {submission.status === "GRADED" && (
+                <div className="mt-3 pt-3 border-t space-y-1.5 bg-emerald-500/10 -mx-4 -mb-4 p-4 rounded-b-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                      Score: {submission.score} / {assignment.maxScore}
+                    </span>
+                    {submission.grade && (
+                      <Badge className="text-sm font-bold bg-emerald-600">Grade: {submission.grade}</Badge>
+                    )}
+                  </div>
+                  {submission.feedback && (
+                    <div className="text-xs text-emerald-950 dark:text-emerald-100">
+                      <span className="font-semibold">Instructor Feedback:</span>
+                      <p className="mt-0.5 whitespace-pre-line">{submission.feedback}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+              You have not submitted this assignment yet.
+            </div>
+          )}
+
+          {/* Submission Form or Locked Notice */}
+          {isGraded ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 p-4 text-center space-y-1.5 pt-3">
+              <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                <Lock className="h-4 w-4" /> Assignment Graded & Locked
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Your instructor has evaluated and graded this assignment. Further edits and resubmissions are closed.
+              </p>
+            </div>
+          ) : (!isSubmitted || assignment.allowResubmission) ? (
+            <form onSubmit={handleSubmit} className="space-y-3 pt-2 border-t">
+              <h4 className="text-sm font-semibold">
+                {isSubmitted ? "Resubmit Your Work" : "Submit Your Assignment"}
+              </h4>
+
+              <div>
+                <Label htmlFor="text-sub" className="text-xs font-medium">
+                  Text or Answer / Notes
+                </Label>
+                <Textarea
+                  id="text-sub"
+                  placeholder="Paste repository links, written answers, or submission notes here..."
+                  rows={4}
+                  value={textSubmission}
+                  onChange={(e) => setTextSubmission(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="file-sub" className="text-xs font-medium">
+                  Upload File / Document / Code Archive
+                </Label>
+                <Input
+                  id="file-sub"
+                  type="file"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  className="mt-1"
+                />
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  PDF, DOCX, ZIP, images, code files up to 50MB
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={onClose}>
+                  Close
+                </Button>
+                <Button type="submit" size="sm" disabled={submitting || uploading}>
+                  {uploading ? "Uploading File..." : submitting ? "Submitting..." : isSubmitted ? "Resubmit Work" : "Submit Work"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="rounded-lg border border-muted bg-muted/30 p-4 text-center space-y-1">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" /> Resubmissions are not permitted for this assignment
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

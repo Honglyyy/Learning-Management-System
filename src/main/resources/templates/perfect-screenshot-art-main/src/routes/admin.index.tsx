@@ -20,7 +20,7 @@ import { CrudPanel } from "@/components/CrudPanel";
 import { MultiSelect } from "@/components/MultiSelect";
 import { SelectFetch } from "@/components/SelectFetch";
 import { toast } from "sonner";
-import { LayoutDashboard, BookOpen, FolderTree, Layers, FileVideo, ListChecks, HelpCircle, CheckSquare, CreditCard, Users, Shield, Plus, Trash2, Upload } from "lucide-react";
+import { LayoutDashboard, BookOpen, FolderTree, Layers, FileVideo, ListChecks, HelpCircle, CheckSquare, CreditCard, Users, Shield, Plus, Trash2, Upload, Check } from "lucide-react";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Admin dashboard — Lumen LMS" }] }),
@@ -439,38 +439,82 @@ function AdminPayments() {
   const list = useQuery<any[]>({ queryKey: ["admin-payments"], queryFn: () => api("/api/payments") });
   const update = useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
-      api(`/api/payments/${id}/status`, { method: "PATCH", body: { status, providerReference: "manual-admin-confirmation" } }),
-    onSuccess: () => { toast.success("Status updated"); qc.invalidateQueries({ queryKey: ["admin-payments"] }); },
+      api(`/api/payments/${id}/status`, { method: "PATCH", body: { status, providerReference: "admin-confirmed" } }),
+    onSuccess: (_, vars) => {
+      if (vars.status === "PAID") {
+        toast.success("Payment confirmed and student enrolled!");
+      } else {
+        toast.success(`Payment status updated to ${vars.status}`);
+      }
+      qc.invalidateQueries({ queryKey: ["admin-payments"] });
+      qc.invalidateQueries({ queryKey: ["admin-enrollments"] });
+    },
+    onError: () => toast.error("Failed to update payment status"),
   });
   const del = useMutation({ mutationFn: (id: number) => api(`/api/payments/${id}`, { method: "DELETE" }), onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-payments"] }); } });
 
+  const pendingCount = list.data?.filter((p: any) => p.status === "PENDING").length || 0;
+
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Payments</h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Payments</h2>
+          <p className="text-xs text-muted-foreground">
+            Approve payments made via ABA PayWay. Confirming a payment automatically activates the student's enrollment.
+          </p>
+        </div>
+        {pendingCount > 0 && (
+          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 font-medium">
+            {pendingCount} Pending Confirmation
+          </Badge>
+        )}
+      </div>
+
       <ApiAlert error={list.error} />
       {list.isLoading ? <Skeleton className="h-40" /> : (
         <div className="rounded-md border border-border bg-card overflow-x-auto">
           <Table>
-            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Student</TableHead><TableHead>Course</TableHead><TableHead>Amount</TableHead><TableHead>Provider</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Student</TableHead><TableHead>Course</TableHead><TableHead>Amount</TableHead><TableHead>Provider</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((p: any) => (
-                <TableRow key={p.paymentId || p.id}>
+                <TableRow key={p.paymentId || p.id} className={p.status === "PENDING" ? "bg-amber-50/40 dark:bg-amber-950/10" : ""}>
                   <TableCell>{p.paymentId || p.id}</TableCell>
-                  <TableCell>{p.username || p.userEmail}</TableCell>
+                  <TableCell className="font-medium">{p.username || p.userEmail}</TableCell>
                   <TableCell>{p.courseTitle}</TableCell>
-                  <TableCell>${Number(p.amount ?? 0).toFixed(2)}</TableCell>
-                  <TableCell>{p.provider}</TableCell>
+                  <TableCell className="font-semibold">${Number(p.amount ?? 0).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {p.provider || "ABA_PAYWAY"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{p.providerReference}</TableCell>
                   <TableCell>
-                    <Select value={p.status} onValueChange={(v) => update.mutate({ id: p.paymentId || p.id, status: v })}>
-                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                      <SelectContent>{PAYMENT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select value={p.status} onValueChange={(v) => update.mutate({ id: p.paymentId || p.id, status: v })}>
+                        <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>{PAYMENT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                      {p.status === "PENDING" && (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs gap-1 font-medium whitespace-nowrap"
+                          disabled={update.isPending}
+                          onClick={() => update.mutate({ id: p.paymentId || p.id, status: "PAID" })}
+                        >
+                          <Check className="h-3.5 w-3.5" /> Confirm & Enroll
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}
                   </TableCell>
-                  <TableCell><Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete payment?")) del.mutate(p.paymentId || p.id); }}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete payment?")) del.mutate(p.paymentId || p.id); }}>
+                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -17,6 +17,23 @@ public record PaymentResponseDTO(
         String providerReference,
         PaymentStatus status,
         Timestamp createdAt,
-        Timestamp updatedAt
+        Timestamp updatedAt,
+        String paymentUrl
 ) {
+    public PaymentResponseDTO(
+            Long paymentId,
+            Long userId,
+            String username,
+            String userEmail,
+            Long courseId,
+            String courseTitle,
+            BigDecimal amount,
+            String provider,
+            String providerReference,
+            PaymentStatus status,
+            Timestamp createdAt,
+            Timestamp updatedAt
+    ) {
+        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, null);
+    }
 }

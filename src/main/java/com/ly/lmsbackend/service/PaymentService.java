@@ -7,6 +7,7 @@ import com.ly.lmsbackend.mapper.PaymentMapper;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.PaymentStatus;
 import com.ly.lmsbackend.model.Payments;
+import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.PaymentRepository;
@@ -50,8 +51,8 @@ public class PaymentService {
         payment.setUser(user);
         payment.setCourse(course);
         payment.setAmount(course.getPrice() == null ? BigDecimal.ZERO : course.getPrice());
-        payment.setProvider(dto.provider() == null || dto.provider().isBlank() ? "MANUAL" : dto.provider());
-        payment.setProviderReference("checkout_" + UUID.randomUUID());
+        payment.setProvider(dto.provider() == null || dto.provider().isBlank() ? "ABA_PAYWAY" : dto.provider());
+        payment.setProviderReference("aba_" + UUID.randomUUID().toString().substring(0, 8));
         payment.setStatus(PaymentStatus.PENDING);
 
         return paymentMapper.toDTO(paymentRepository.save(payment));
@@ -59,8 +60,18 @@ public class PaymentService {
 
     public PaymentResponseDTO confirmPayment(Long paymentId, String email) {
         Payments payment = getPayment(paymentId);
-        if (!payment.getUser().getEmail().equals(email)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot confirm this payment");
+        Users user = getUser(email);
+
+        boolean isAdmin = user.getRole() == Roles.ADMIN;
+        boolean isOwner = payment.getUser().getEmail().equals(email);
+
+        if (!isAdmin && !isOwner) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to confirm this payment");
+        }
+
+        // Paid courses must be confirmed by an admin after the student pays via ABA PayWay
+        if (!isAdmin && payment.getAmount() != null && payment.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Paid courses require admin confirmation after completing payment via ABA PayWay");
         }
 
         if (payment.getStatus() == PaymentStatus.PAID) {
@@ -69,7 +80,7 @@ public class PaymentService {
 
         payment.setStatus(PaymentStatus.PAID);
         Payments saved = paymentRepository.save(payment);
-        enrollIfNeeded(saved, email);
+        enrollIfNeeded(saved, saved.getUser().getEmail());
 
         return paymentMapper.toDTO(saved);
     }

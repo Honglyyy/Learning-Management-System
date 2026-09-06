@@ -28,6 +28,8 @@ import {
   Download,
   Check,
   Paperclip,
+  CreditCard,
+  ExternalLink,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -37,6 +39,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/courses/$id")({
   component: CourseDetail,
@@ -49,6 +57,7 @@ function CourseDetail() {
 
   const [checkoutError, setCheckoutError] = useState<unknown>(null);
   const [activeLesson, setActiveLesson] = useState<any>(null);
+  const [checkoutPendingModal, setCheckoutPendingModal] = useState<any>(null);
 
   const [reviewText, setReviewText] = useState("");
   const [rating, setRating] = useState(5);
@@ -89,6 +98,16 @@ function CourseDetail() {
     enabled: isAuthenticated,
   });
 
+  // PAYMENTS
+  const myPayments = useQuery<any[]>({
+    queryKey: ["my-payments"],
+    queryFn: () => api("/api/payments/me", { auth: true }).catch(() => []),
+    enabled: isAuthenticated,
+  });
+
+  const pendingPayment = myPayments.data?.find(
+    (p: any) => String(p.courseId) === String(id) && p.status === "PENDING"
+  );
 
   const reviews = useQuery({
     queryKey: ["reviews", id],
@@ -125,23 +144,41 @@ function CourseDetail() {
     return { lessonId, title: `Lesson ${lessonId}` };
   };
 
-  // ENROLL (payment flow kept same)
+  // ENROLL VIA ABA PAYWAY
   const buy = useMutation({
     mutationFn: async () => {
+      const isFreeCourse = Number(course.data?.price ?? 0) === 0;
+
       const checkout = await api<any>(`/api/payments/checkout`, {
         method: "POST",
-        body: { courseId: Number(id), provider: "MANUAL" },
+        body: { courseId: Number(id), provider: "ABA_PAYWAY" },
+        auth: true,
       });
 
-      await api(`/api/payments/${checkout.paymentId}/confirm`, {
-        method: "POST",
-      });
+      if (isFreeCourse) {
+        // Free course can be confirmed immediately
+        await api(`/api/payments/${checkout.paymentId}/confirm`, {
+          method: "POST",
+          auth: true,
+        });
+        return { ...checkout, isFreeCourse: true };
+      }
 
-      return checkout;
+      return { ...checkout, isFreeCourse: false };
     },
-    onSuccess: () => {
-      toast.success("You are now enrolled!");
-      nav({ to: "/my/enrollments" });
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["my-enrollments"] });
+      qc.invalidateQueries({ queryKey: ["my-payments"] });
+
+      if (res.isFreeCourse) {
+        toast.success("You are now enrolled in this free course!");
+        nav({ to: "/my/enrollments" });
+      } else {
+        if (res.paymentUrl) {
+          window.open(res.paymentUrl, "_blank", "noopener,noreferrer");
+        }
+        setCheckoutPendingModal(res);
+      }
     },
     onError: (e) => setCheckoutError(e),
   });
@@ -431,9 +468,41 @@ function CourseDetail() {
               <CardContent className="space-y-3">
                 <ApiAlert error={checkoutError} />
 
-                <Button
-                    className="w-full"
-                    disabled={buy.isPending || isEnrolled}
+                {isEnrolled ? (
+                  <Button className="w-full" disabled>
+                    Already Enrolled
+                  </Button>
+                ) : pendingPayment ? (
+                  <div className="space-y-2.5">
+                    <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-200">
+                      <p className="font-semibold mb-1 flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5 shrink-0" /> Payment Pending Approval
+                      </p>
+                      <p>Your payment via ABA Mobile is awaiting admin verification. Once confirmed, you will automatically be enrolled.</p>
+                    </div>
+                    {pendingPayment.paymentUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs gap-1 border-primary text-primary"
+                        onClick={() => window.open(pendingPayment.paymentUrl, "_blank", "noopener,noreferrer")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" /> Re-open ABA PayWay
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-muted-foreground"
+                      onClick={() => nav({ to: "/my/payments" })}
+                    >
+                      View in My Payments
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full bg-[#005a87] hover:bg-[#00476a] text-white gap-1.5 font-medium"
+                    disabled={buy.isPending}
                     onClick={() => {
                       if (!isAuthenticated) {
                         nav({ to: "/login" });
@@ -443,16 +512,20 @@ function CourseDetail() {
                       setCheckoutError(null);
                       buy.mutate();
                     }}
-                >
-                  {isEnrolled
-                      ? "Already Enrolled"
-                      : buy.isPending
-                          ? "Processing..."
-                          : "Enroll Now"}
-                </Button>
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    {buy.isPending
+                      ? "Generating Checkout..."
+                      : Number(c.price ?? 0) === 0
+                      ? "Enroll for Free"
+                      : `Pay with ABA ($${Number(c.price ?? 0).toFixed(2)})`}
+                  </Button>
+                )}
 
                 <p className="text-xs text-center text-muted-foreground">
-                  You must enroll to access lessons
+                  {Number(c.price ?? 0) === 0
+                    ? "Free course — instant enrollment"
+                    : "Pay via ABA PayWay & enjoy full course upon admin confirmation"}
                 </p>
               </CardContent>
             </Card>
@@ -543,6 +616,68 @@ function CourseDetail() {
             </Card>
           </aside>
         </div>
+
+        {/* ================= ABA PAYWAY CHECKOUT MODAL ================= */}
+        {checkoutPendingModal && (
+          <Dialog open={!!checkoutPendingModal} onOpenChange={() => setCheckoutPendingModal(null)}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-lg">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  ABA PayWay Checkout
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="rounded-lg border bg-muted/40 p-4 text-center space-y-1">
+                  <p className="text-xs text-muted-foreground">Course</p>
+                  <p className="font-semibold text-sm line-clamp-1">{c?.title}</p>
+                  <p className="text-3xl font-bold text-primary mt-2">
+                    ${Number(checkoutPendingModal.amount ?? c?.price ?? 0).toFixed(2)}
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3.5 space-y-2 text-xs text-amber-900 dark:text-amber-200">
+                  <p className="font-semibold text-sm">Next Steps:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs leading-relaxed">
+                    <li>Open ABA Mobile using the button below to pay <strong>${Number(checkoutPendingModal.amount ?? c?.price ?? 0).toFixed(2)}</strong>.</li>
+                    <li>The Admin will verify and confirm your payment.</li>
+                    <li>Once confirmed, you will automatically have full access to the course!</li>
+                  </ol>
+                </div>
+
+                {checkoutPendingModal.paymentUrl && (
+                  <Button
+                    className="w-full bg-[#005a87] hover:bg-[#00476a] text-white font-medium py-5 gap-2"
+                    onClick={() => window.open(checkoutPendingModal.paymentUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    <ExternalLink className="h-4 w-4" /> Open ABA Mobile / PayWay
+                  </Button>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setCheckoutPendingModal(null);
+                      nav({ to: "/my/payments" });
+                    }}
+                  >
+                    View in My Payments
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-xs"
+                    onClick={() => setCheckoutPendingModal(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
   );
 }

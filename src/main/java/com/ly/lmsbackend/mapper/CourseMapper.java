@@ -5,6 +5,8 @@ import com.ly.lmsbackend.dto.coursedtos.CourseResponseDTO;
 import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Users;
+import com.ly.lmsbackend.model.CourseLevel;
+import com.ly.lmsbackend.model.CourseStatus;
 import com.ly.lmsbackend.repository.CourseReviewRepository;
 import org.springframework.stereotype.Component;
 
@@ -35,25 +37,47 @@ public class CourseMapper {
         course.setInstructor(instructor);
         course.setCategories(categories);
 
+        course.setLevel(dto.level() != null ? dto.level() : CourseLevel.ALL_LEVELS);
+        course.setStatus(dto.status() != null ? dto.status() : CourseStatus.PUBLISHED);
+        course.setLearningOutcomes(dto.learningOutcomes());
+        course.setRequirements(dto.requirements());
+
         return course;
     }
 
-    public CourseResponseDTO toDTO(
-            Courses course
-    ){
-        List<String> coursesName = course.getCategories()
-                .stream()
-                .map(Categories::getCategory)
-                .toList();
-        List<Long> categoryIds = course.getCategories()
-                .stream()
-                .map(Categories::getCategoryId)
-                .toList();
+    public CourseResponseDTO toDTO(Courses course) {
+        return toDTO(course, false);
+    }
 
-        Double rating = courseReviewRepository.findByCourse_CourseId(course.getCourseId())
-                .stream()
-                .mapToDouble(rate -> rate.getRating())
-                .average().orElse(0.0);
+    public CourseResponseDTO toDTO(Courses course, Boolean isFavorite) {
+        List<String> coursesName = course.getCategories() != null
+                ? course.getCategories().stream().map(Categories::getCategory).toList()
+                : List.of();
+        List<Long> categoryIds = course.getCategories() != null
+                ? course.getCategories().stream().map(Categories::getCategoryId).toList()
+                : List.of();
+
+        Double rating = 0.0;
+        if (course.getCourseId() != null) {
+            rating = courseReviewRepository.findByCourse_CourseId(course.getCourseId())
+                    .stream()
+                    .mapToDouble(rate -> rate.getRating())
+                    .average().orElse(0.0);
+        }
+
+        Long instructorId = course.getInstructor() != null ? course.getInstructor().getId() : null;
+        String instructorName = course.getInstructor() != null ? course.getInstructor().getUsername() : null;
+
+        long lessonCount = 0L;
+        if (course.getSections() != null) {
+            lessonCount = course.getSections().stream()
+                    .filter(s -> s.getLessons() != null)
+                    .mapToLong(s -> s.getLessons().size())
+                    .sum();
+        }
+
+        long enrollmentCount = (course.getEnrollments() != null) ? course.getEnrollments().size() : 0L;
+
         return new CourseResponseDTO(
                 course.getCourseId(),
                 course.getTitle(),
@@ -62,11 +86,17 @@ public class CourseMapper {
                 course.getOverallDuration(),
                 course.getCoverUrl(),
                 course.getCoverPublicId(),
-                course.getInstructor().getId(),
-                course.getInstructor().getUsername(),
+                instructorId,
+                instructorName,
                 categoryIds,
                 coursesName,
-                rating
+                rating,
+                course.getLevel() != null ? course.getLevel() : CourseLevel.ALL_LEVELS,
+                course.getStatus() != null ? course.getStatus() : CourseStatus.PUBLISHED,
+                lessonCount,
+                enrollmentCount,
+                isFavorite != null ? isFavorite : false
         );
     }
 }
+

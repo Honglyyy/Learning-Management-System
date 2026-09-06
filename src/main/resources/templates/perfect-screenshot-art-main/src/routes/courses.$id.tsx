@@ -30,6 +30,7 @@ import {
   Paperclip,
   CreditCard,
   ExternalLink,
+  Heart,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -129,6 +130,45 @@ function CourseDetail() {
     queryKey: ["lessons-status", id],
     queryFn: () => api(`/api/courses/${id}/lessons-status`, { auth: true }).catch(() => []),
     enabled: isAuthenticated && isEnrolled,
+  });
+
+  const favCheckQuery = useQuery({
+    queryKey: ["favorite-check", id],
+    queryFn: () => api<{ isFavorite: boolean }>(`/api/favorites/check/${id}`),
+    enabled: isAuthenticated && !!id,
+  });
+  const isFav = favCheckQuery.data?.isFavorite ?? course.data?.isFavorite ?? false;
+
+  const toggleFavorite = useMutation({
+    mutationFn: async () => {
+      if (isFav) {
+        await api(`/api/favorites/${id}`, { method: "DELETE" });
+      } else {
+        await api(`/api/favorites/${id}`, { method: "POST" });
+      }
+    },
+    onSuccess: () => {
+      toast.success(isFav ? "Course removed from wishlist" : "Course saved to wishlist");
+      qc.invalidateQueries({ queryKey: ["favorite-check", id] });
+      qc.invalidateQueries({ queryKey: ["my-favorites"] });
+      qc.invalidateQueries({ queryKey: ["course", id] });
+      qc.invalidateQueries({ queryKey: ["courses"] });
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to update wishlist"),
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: (newStatus: string) =>
+      api(`/api/courses/${id}/status`, {
+        method: "PATCH",
+        body: { status: newStatus },
+      }),
+    onSuccess: (updated: any) => {
+      toast.success(`Course status updated to ${updated.status}`);
+      qc.invalidateQueries({ queryKey: ["course", id] });
+      qc.invalidateQueries({ queryKey: ["courses"] });
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to change status"),
   });
 
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
@@ -258,13 +298,34 @@ function CourseDetail() {
           {/* LEFT */}
           <div className="lg:col-span-2">
 
-            {/* Categories */}
-            <div className="mb-4 flex flex-wrap gap-2">
+            {/* Categories, Level & Status */}
+            <div className="mb-4 flex flex-wrap items-center gap-2">
               {cats.map((cat: string) => (
                   <Badge key={cat} variant="secondary">
                     {cat}
                   </Badge>
               ))}
+              <Badge variant="outline" className="font-semibold text-primary">
+                {c.level || "ALL LEVELS"}
+              </Badge>
+              {c.status && (
+                <Badge variant={c.status === "PUBLISHED" ? "default" : "secondary"}>
+                  {c.status}
+                </Badge>
+              )}
+              {(role === "ADMIN" || role === "INSTRUCTOR") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-xs px-2"
+                  disabled={toggleStatus.isPending}
+                  onClick={() =>
+                    toggleStatus.mutate(c.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED")
+                  }
+                >
+                  {c.status === "PUBLISHED" ? "Unpublish (Draft)" : "Publish Course"}
+                </Button>
+              )}
             </div>
 
             {/* Title */}
@@ -310,6 +371,29 @@ function CourseDetail() {
                     alt={c.title}
                     className="mt-6 rounded-lg object-cover max-h-72 w-full shadow-sm"
                 />
+            )}
+
+            {/* ================= LEARNING OUTCOMES & REQUIREMENTS ================= */}
+            {c.learningOutcomes && (
+              <div className="mt-8 rounded-lg border border-border bg-card p-5">
+                <h3 className="font-semibold text-lg flex items-center gap-2 mb-3 text-foreground">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" /> What you'll learn
+                </h3>
+                <div className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
+                  {c.learningOutcomes}
+                </div>
+              </div>
+            )}
+
+            {c.requirements && (
+              <div className="mt-4 rounded-lg border border-border bg-card p-5">
+                <h3 className="font-semibold text-lg flex items-center gap-2 mb-3 text-foreground">
+                  <ListChecks className="h-5 w-5 text-primary" /> Requirements & Prerequisites
+                </h3>
+                <div className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
+                  {c.requirements}
+                </div>
+              </div>
             )}
 
             {/* ================= CURRICULUM ================= */}
@@ -595,6 +679,27 @@ function CourseDetail() {
                     ? "Free course — instant enrollment"
                     : "Pay via ABA PayWay & enjoy full course upon admin confirmation"}
                 </p>
+
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 text-sm border-border hover:bg-muted/80"
+                  disabled={toggleFavorite.isPending}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      toast.info("Please sign in to save courses to your wishlist");
+                      nav({ to: "/login" });
+                      return;
+                    }
+                    toggleFavorite.mutate();
+                  }}
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      isFav ? "fill-rose-500 text-rose-500" : "text-muted-foreground"
+                    }`}
+                  />
+                  {isFav ? "Saved in Wishlist" : "Add to Wishlist"}
+                </Button>
               </CardContent>
             </Card>
 

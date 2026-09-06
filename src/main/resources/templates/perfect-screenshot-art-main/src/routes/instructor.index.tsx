@@ -211,6 +211,19 @@ function CourseCard({
         onError: () => toast.error("Failed to delete course"),
     });
 
+    const toggleStatus = useMutation({
+        mutationFn: (newStatus: string) =>
+            api(`/api/courses/${course.courseId}/status`, {
+                method: "PATCH",
+                body: { status: newStatus },
+            }),
+        onSuccess: (updated: any) => {
+            toast.success(`Course status updated to ${updated.status}`);
+            onMutated();
+        },
+        onError: (e: any) => toast.error(e.message || "Failed to update status"),
+    });
+
     return (
         <Card className="overflow-hidden border shadow-sm flex flex-col">
             {(course.coverUrl || course.coverDir) && (
@@ -225,6 +238,25 @@ function CourseCard({
                 <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1 flex-1">
                         <CardTitle className="text-lg leading-snug">{course.title}</CardTitle>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <Badge variant={course.status === "PUBLISHED" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                                {course.status || "PUBLISHED"}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {course.level ? course.level.replace("_", " ") : "ALL LEVELS"}
+                            </Badge>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-5 text-[10px] px-1.5 py-0 font-normal"
+                                disabled={toggleStatus.isPending}
+                                onClick={() =>
+                                    toggleStatus.mutate(course.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED")
+                                }
+                            >
+                                {course.status === "PUBLISHED" ? "Unpublish" : "Publish"}
+                            </Button>
+                        </div>
                         {course.categories && course.categories.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                                 {course.categories.map((cat: any) => {
@@ -1109,6 +1141,10 @@ function CreateCourseDialog({ onCreated }: { onCreated: () => void }) {
         coverPublicId: "",
         coverDir: "",
         categoryId: [],
+        level: "ALL_LEVELS",
+        status: "PUBLISHED",
+        learningOutcomes: "",
+        requirements: "",
     });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
@@ -1218,6 +1254,10 @@ function EditCourseDialog({
         coverPublicId: course.coverPublicId ?? "",
         coverDir: course.coverUrl ?? course.coverDir ?? "",
         categoryId: course.categoryId ?? course.categoryIds ?? [],
+        level: course.level ?? "ALL_LEVELS",
+        status: course.status ?? "PUBLISHED",
+        learningOutcomes: course.learningOutcomes ?? "",
+        requirements: course.requirements ?? "",
     });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
@@ -1352,6 +1392,49 @@ function CourseFormFields({
                     selected={form.categoryId}
                     onChange={(ids: any) => setForm({ ...form, categoryId: ids })}
                     placeholder="Select categories..."
+                />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <Label>Level</Label>
+                    <select
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                        value={form.level || "ALL_LEVELS"}
+                        onChange={(e) => setForm({ ...form, level: e.target.value })}
+                    >
+                        <option value="ALL_LEVELS">All Levels</option>
+                        <option value="BEGINNER">Beginner</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                    </select>
+                </div>
+                <div className="space-y-1">
+                    <Label>Status</Label>
+                    <select
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                        value={form.status || "PUBLISHED"}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    >
+                        <option value="PUBLISHED">Published</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="ARCHIVED">Archived</option>
+                    </select>
+                </div>
+            </div>
+            <div className="space-y-1">
+                <Label>Learning Outcomes</Label>
+                <Textarea
+                    placeholder="What students will learn (e.g. Master Spring Boot, REST APIs)..."
+                    value={form.learningOutcomes || ""}
+                    onChange={(e) => setForm({ ...form, learningOutcomes: e.target.value })}
+                />
+            </div>
+            <div className="space-y-1">
+                <Label>Requirements & Prerequisites</Label>
+                <Textarea
+                    placeholder="Prerequisites (e.g. Basic Java knowledge)..."
+                    value={form.requirements || ""}
+                    onChange={(e) => setForm({ ...form, requirements: e.target.value })}
                 />
             </div>
             <div className="space-y-1">

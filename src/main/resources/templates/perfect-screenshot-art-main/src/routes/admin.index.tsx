@@ -126,7 +126,19 @@ function AdminCourses() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  console.log(data)
+  const toggleStatus = useMutation({
+    mutationFn: ({ courseId, status }: { courseId: number; status: string }) =>
+      api(`/api/courses/${courseId}/status`, {
+        method: "PATCH",
+        body: { status },
+      }),
+    onSuccess: (updated: any) => {
+      toast.success(`Course #${updated.courseId} status updated to ${updated.status}`);
+      qc.invalidateQueries({ queryKey: ["admin-courses"] });
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to update status"),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -143,6 +155,8 @@ function AdminCourses() {
                 <TableHead>Title</TableHead>
                 <TableHead>Cover</TableHead>
                 <TableHead>Categories</TableHead>
+                <TableHead>Level</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Instructor</TableHead>
@@ -154,14 +168,34 @@ function AdminCourses() {
               {data?.map((c: any) => (
                 <TableRow key={c.courseId}>
                   <TableCell>{c.courseId}</TableCell>
-                  <TableCell>{c.title}</TableCell>
+                  <TableCell className="font-medium">{c.title}</TableCell>
                   <TableCell><img src={mediaUrl(c.coverUrl || c.coverDir)} alt="" width={"100px"} className="rounded object-cover max-h-16" /></TableCell>
                   <TableCell>{c.categories?.join(" , ") || "—"}</TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{c.level ? c.level.replace("_", " ") : "ALL LEVELS"}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant={c.status === "PUBLISHED" ? "default" : "secondary"} className="text-[10px]">
+                      {c.status || "PUBLISHED"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>${Number(c.price ?? 0).toFixed(2)}</TableCell>
                   <TableCell>{c.overallDuration || "—"}</TableCell>
                   <TableCell>{c.instructor || "—"}</TableCell>
                   <TableCell>{c.rating != null && c.rating > 0 ? `⭐ ${Number(c.rating).toFixed(1)}` : "—"}</TableCell>
                   <TableCell className="space-x-1 text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-2"
+                      disabled={toggleStatus.isPending}
+                      onClick={() =>
+                        toggleStatus.mutate({
+                          courseId: c.courseId,
+                          status: c.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
+                        })
+                      }
+                    >
+                      {c.status === "PUBLISHED" ? "Unpublish" : "Publish"}
+                    </Button>
                     <CourseDialog mode="edit" initial={c} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-courses"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete course?")) del.mutate(c.courseId); }}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
@@ -231,6 +265,10 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
                           return found?.categoryId;
                         }
                     ).filter(Boolean) || [],
+                level: initial.level || "ALL_LEVELS",
+                status: initial.status || "PUBLISHED",
+                learningOutcomes: initial.learningOutcomes || "",
+                requirements: initial.requirements || "",
               }
               : {
                 title: "",
@@ -242,6 +280,10 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
                 coverDir: "",
                 instructor: 1,
                 categoryId: [],
+                level: "ALL_LEVELS",
+                status: "PUBLISHED",
+                learningOutcomes: "",
+                requirements: "",
               }
           );
           }
@@ -249,7 +291,7 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
       }
     >
       <DialogTrigger asChild>{mode === "create" ? <Button size="sm"><Plus className="mr-1 h-4 w-4" />New course</Button> : <Button size="icon" variant="ghost"><LayoutDashboard className="h-4 w-4" /></Button>}</DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{mode === "create" ? "New course" : "Edit course"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <ApiAlert error={error} />
@@ -258,6 +300,49 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1"><Label>Price</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
             <div className="space-y-1"><Label>Duration</Label><Input value={form.overallDuration} onChange={(e) => setForm({ ...form, overallDuration: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Level</Label>
+              <select
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                value={form.level || "ALL_LEVELS"}
+                onChange={(e) => setForm({ ...form, level: e.target.value })}
+              >
+                <option value="ALL_LEVELS">All Levels</option>
+                <option value="BEGINNER">Beginner</option>
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="ADVANCED">Advanced</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Status</Label>
+              <select
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                value={form.status || "PUBLISHED"}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+              >
+                <option value="PUBLISHED">Published</option>
+                <option value="DRAFT">Draft</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Learning Outcomes</Label>
+            <Textarea
+              placeholder="What students will learn..."
+              value={form.learningOutcomes || ""}
+              onChange={(e) => setForm({ ...form, learningOutcomes: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Requirements</Label>
+            <Textarea
+              placeholder="Course prerequisites..."
+              value={form.requirements || ""}
+              onChange={(e) => setForm({ ...form, requirements: e.target.value })}
+            />
           </div>
           <div className="space-y-1"><Label>Instructor ID</Label><Input type="number" value={form.instructorId || form.instructor || ""} onChange={(e) => setForm({ ...form, instructor: parseInt(e.target.value) || null })} /></div>
           <div className="space-y-1"><Label>Categories</Label>{catsLoading ? <Skeleton className="h-10" /> : <MultiSelect options={catOptions} selected={form.categoryId||[]} onChange={(ids) => setForm({ ...form, categoryId: ids })} placeholder="Select categories..." />}</div>

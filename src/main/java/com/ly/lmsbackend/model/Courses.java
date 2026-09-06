@@ -81,7 +81,43 @@ public class Courses {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payments> payments;
 
+    @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.ColumnDefault("'ALL_LEVELS'")
+    private CourseLevel level = CourseLevel.ALL_LEVELS;
+
+    @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.ColumnDefault("'PUBLISHED'")
+    private CourseStatus status = CourseStatus.PUBLISHED;
+
+    @Column(name = "learning_outcomes", columnDefinition = "TEXT")
+    private String learningOutcomes;
+
+    @Column(name = "requirements", columnDefinition = "TEXT")
+    private String requirements;
+
     @ManyToOne
     @JoinColumn(name = "instructor_id")
     private Users instructor;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CourseFavorite> favorites;
+
+    public CourseLevel getLevel() {
+        return level != null ? level : CourseLevel.ALL_LEVELS;
+    }
+
+    public CourseStatus getStatus() {
+        return status != null ? status : CourseStatus.PUBLISHED;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void ensureStage4Defaults() {
+        if (this.level == null) {
+            this.level = CourseLevel.ALL_LEVELS;
+        }
+        if (this.status == null) {
+            this.status = CourseStatus.PUBLISHED;
+        }
+    }
 }

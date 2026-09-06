@@ -54,6 +54,28 @@ public class FileUploadService {
         return upload(file, "lesson-videos", VIDEO_CONTENT_TYPES, VIDEO_EXTENSIONS, maxVideoSize);
     }
 
+    public FileUploadResponseDTO uploadStudentPhoto(MultipartFile file) {
+        return upload(file, "profile-photos/students", IMAGE_CONTENT_TYPES, IMAGE_EXTENSIONS, maxImageSize);
+    }
+
+    public FileUploadResponseDTO uploadInstructorPhoto(MultipartFile file) {
+        return upload(file, "profile-photos/instructors", IMAGE_CONTENT_TYPES, IMAGE_EXTENSIONS, maxImageSize);
+    }
+
+    public FileUploadResponseDTO uploadProfilePhoto(MultipartFile file) {
+        return upload(file, "profile-photos", IMAGE_CONTENT_TYPES, IMAGE_EXTENSIONS, maxImageSize);
+    }
+
+    public void deleteAsset(String publicId) {
+        if (publicId == null || publicId.isBlank()) {
+            return;
+        }
+        try {
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+        } catch (IOException ignored) {
+        }
+    }
+
     private FileUploadResponseDTO upload(
             MultipartFile file,
             String folder,

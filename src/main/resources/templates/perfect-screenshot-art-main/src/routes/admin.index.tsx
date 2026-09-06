@@ -142,6 +142,8 @@ function AdminCourses() {
                 <TableHead>Categories</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Duration</TableHead>
+                <TableHead>Instructor</TableHead>
+                <TableHead>Rating</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -150,10 +152,12 @@ function AdminCourses() {
                 <TableRow key={c.courseId}>
                   <TableCell>{c.courseId}</TableCell>
                   <TableCell>{c.title}</TableCell>
-                  <TableCell><img src={mediaUrl(c.coverDir)} alt="" width={"100px"}/></TableCell>
-                  <TableCell>{c.categories.join(" , ")}</TableCell>
+                  <TableCell><img src={mediaUrl(c.coverUrl || c.coverDir)} alt="" width={"100px"} className="rounded object-cover max-h-16" /></TableCell>
+                  <TableCell>{c.categories?.join(" , ") || "—"}</TableCell>
                   <TableCell>${Number(c.price ?? 0).toFixed(2)}</TableCell>
-                  <TableCell>{c.overallDuration}</TableCell>
+                  <TableCell>{c.overallDuration || "—"}</TableCell>
+                  <TableCell>{c.instructor || "—"}</TableCell>
+                  <TableCell>{c.rating != null && c.rating > 0 ? `⭐ ${Number(c.rating).toFixed(1)}` : "—"}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <CourseDialog mode="edit" initial={c} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-courses"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete course?")) del.mutate(c.courseId); }}><Trash2 className="h-4 w-4" /></Button>
@@ -170,7 +174,7 @@ function AdminCourses() {
 
 function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; initial?: any; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<any>(() => initial || { title: "", description: "", price: 0, overallDuration: "", coverDir: "", instructor: 1, categoryId: [] });
+  const [form, setForm] = useState<any>(() => initial || { title: "", description: "", price: 0, overallDuration: "", coverUrl: "", coverPublicId: "", coverDir: "", instructor: 1, categoryId: [] });
   const [error, setError] = useState<unknown>(null);
   const [uploading, setUploading] = useState(false);
   const { data: categories, isLoading: catsLoading } = useQuery<any[]>({
@@ -183,7 +187,7 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
     try {
       const fd = new FormData(); fd.append("file", file);
       const res = await api<any>("/api/uploads/course-cover", { method: "POST", formData: fd });
-      setForm((f: any) => ({ ...f, coverDir: res.url }));
+      setForm((f: any) => ({ ...f, coverUrl: res.url, coverPublicId: res.publicId, coverDir: res.url }));
     } catch (e) { setError(e); } finally { setUploading(false); }
   }
 
@@ -191,7 +195,8 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
     mutationFn: () => {
       const body = { ...form };
       if (mode === "create") return api("/api/courses", { method: "POST", body });
-      return api(`/api/courses/${initial.id}`, { method: "PUT", body });
+      const courseId = initial.courseId || initial.id;
+      return api(`/api/courses/${courseId}`, { method: "PUT", body });
     },
     onSuccess: () => { toast.success("Saved"); setOpen(false); onSaved(); },
     onError: (e) => setError(e),
@@ -203,15 +208,15 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
         label: c.category?.toLowerCase(),
       })) || [];
 
-  // console.table(catOptions)
-
   return (
     <Dialog open={open}
         onOpenChange={(o) => { setOpen(o); if (o) { setForm(
           initial
               ? {
                 ...initial,
-
+                coverUrl: initial.coverUrl ?? initial.coverDir ?? "",
+                coverPublicId: initial.coverPublicId ?? "",
+                coverDir: initial.coverUrl ?? initial.coverDir ?? "",
                 categoryId:
                     initial.categories?.map(
                         (cat: any) => {
@@ -229,6 +234,8 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
                 description: "",
                 price: 0,
                 overallDuration: "",
+                coverUrl: "",
+                coverPublicId: "",
                 coverDir: "",
                 instructor: 1,
                 categoryId: [],
@@ -249,8 +256,7 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
             <div className="space-y-1"><Label>Price</Label><Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} /></div>
             <div className="space-y-1"><Label>Duration</Label><Input value={form.overallDuration} onChange={(e) => setForm({ ...form, overallDuration: e.target.value })} /></div>
           </div>
-          <h1>cateId{form.categoryId}</h1>
-          <div className="space-y-1"><Label>Instructor ID</Label><Input type="number" value={form.instructorId || ""} onChange={(e) => setForm({ ...form, instructor: parseInt(e.target.value) || null })} /></div>
+          <div className="space-y-1"><Label>Instructor ID</Label><Input type="number" value={form.instructorId || form.instructor || ""} onChange={(e) => setForm({ ...form, instructor: parseInt(e.target.value) || null })} /></div>
           <div className="space-y-1"><Label>Categories</Label>{catsLoading ? <Skeleton className="h-10" /> : <MultiSelect options={catOptions} selected={form.categoryId||[]} onChange={(ids) => setForm({ ...form, categoryId: ids })} placeholder="Select categories..." />}</div>
           <div className="space-y-1">
             <Label>Cover</Label>
@@ -258,7 +264,7 @@ function CourseDialog({ mode, initial, onSaved }: { mode: "create" | "edit"; ini
               <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
               {uploading && <Upload className="h-4 w-4 animate-pulse" />}
             </div>
-            {form.coverDir && <img src={mediaUrl(form.coverDir)} alt="cover" className="mt-2 h-24 rounded object-cover" />}
+            {(form.coverUrl || form.coverDir) && <img src={mediaUrl(form.coverUrl || form.coverDir)} alt="cover" className="mt-2 h-24 rounded object-cover" />}
           </div>
         </div>
         <DialogFooter><Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Saving..." : "Save"}</Button></DialogFooter>
@@ -283,9 +289,9 @@ function AdminLessons() {
             <TableBody>
               {list.data?.map((l: any) => (
                 <TableRow key={l.lessonId}>
-                  <TableCell>{l.lessonId}</TableCell><TableCell>{l.title}</TableCell><TableCell>{l.sectionId}</TableCell>
+                  <TableCell>{l.lessonId}</TableCell><TableCell>{l.title}</TableCell><TableCell>{l.sectionName || `Section #${l.sectionId}`}</TableCell>
                   <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
-                    <video src={mediaUrl(l.videoDir)} width={"100px"} controls/>
+                    {(l.videoUrl || l.videoDir) && <video src={mediaUrl(l.videoUrl || l.videoDir)} width={"100px"} controls/>}
                   </TableCell>
                   <TableCell className="space-x-1 text-right">
                     <LessonDialog sections={sections || []} mode="edit" initial={l} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-lessons"] })} />
@@ -303,7 +309,12 @@ function AdminLessons() {
 
 function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "edit"; initial?: any; sections:any[]; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<any>(() => initial || { title: "", videoDir: "", sectionId: "" });
+  const [form, setForm] = useState<any>(() => initial ? {
+    ...initial,
+    videoUrl: initial.videoUrl ?? initial.videoDir ?? "",
+    videoPublicId: initial.videoPublicId ?? "",
+    videoDir: initial.videoUrl ?? initial.videoDir ?? "",
+  } : { title: "", videoUrl: "", videoPublicId: "", videoDir: "", sectionId: "" });
   const [error, setError] = useState<unknown>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -312,7 +323,7 @@ function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "e
     try {
       const fd = new FormData(); fd.append("file", file);
       const res = await api<any>("/api/uploads/lesson-video", { method: "POST", formData: fd });
-      setForm((f: any) => ({ ...f, videoDir: res.url }));
+      setForm((f: any) => ({ ...f, videoUrl: res.url, videoPublicId: res.publicId, videoDir: res.url }));
       toast.success("Video uploaded");
     } catch (e) { setError(e); } finally { setUploading(false); }
   }
@@ -328,7 +339,12 @@ function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "e
   });
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { title: "", videoDir: "", sectionId: "" }); setError(null); } }}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial ? {
+      ...initial,
+      videoUrl: initial.videoUrl ?? initial.videoDir ?? "",
+      videoPublicId: initial.videoPublicId ?? "",
+      videoDir: initial.videoUrl ?? initial.videoDir ?? "",
+    } : { title: "", videoUrl: "", videoPublicId: "", videoDir: "", sectionId: "" }); setError(null); } }}>
       <DialogTrigger asChild>{mode === "create" ? <Button size="sm"><Plus className="mr-1 h-4 w-4" />New lesson</Button> : <Button size="icon" variant="ghost"><FileVideo className="h-4 w-4" /></Button>}</DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>{mode === "create" ? "New lesson" : "Edit lesson"}</DialogTitle></DialogHeader>
@@ -344,7 +360,7 @@ function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "e
           </div>
           <div className="space-y-1"><Label>Video</Label>
             <div className="flex items-center gap-2"><Input type="file" accept="video/*" onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />{uploading && <Upload className="h-4 w-4 animate-pulse" />}</div>
-            {form.videoDir && <p className="text-xs text-muted-foreground truncate">{form.videoDir}</p>}
+            {(form.videoUrl || form.videoDir) && <p className="text-xs text-muted-foreground truncate">{form.videoUrl || form.videoDir}</p>}
           </div>
         </div>
         <DialogFooter><Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button></DialogFooter>
@@ -372,7 +388,7 @@ function AdminPayments() {
       {list.isLoading ? <Skeleton className="h-40" /> : (
         <div className="rounded-md border border-border bg-card overflow-x-auto">
           <Table>
-            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Student</TableHead><TableHead>Course</TableHead><TableHead>Amount</TableHead><TableHead>Provider</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Student</TableHead><TableHead>Course</TableHead><TableHead>Amount</TableHead><TableHead>Provider</TableHead><TableHead>Reference</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((p: any) => (
                 <TableRow key={p.paymentId || p.id}>
@@ -387,6 +403,9 @@ function AdminPayments() {
                       <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>{PAYMENT_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : "—"}
                   </TableCell>
                   <TableCell><Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete payment?")) del.mutate(p.paymentId || p.id); }}><Trash2 className="h-4 w-4" /></Button></TableCell>
                 </TableRow>
@@ -444,7 +463,7 @@ function AdminEnrollments() {
       {list.isLoading ? <Skeleton className="h-40" /> : (
         <div className="rounded-md border border-border bg-card">
           <Table>
-            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>User</TableHead><TableHead>Course</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>User</TableHead><TableHead>Course</TableHead><TableHead>Status</TableHead><TableHead>Enrolled At</TableHead><TableHead></TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((e: any) => (
                 <TableRow key={e.enrollmentId}>
@@ -456,6 +475,9 @@ function AdminEnrollments() {
                       <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>{ENROLL_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                    {e.enrolledAt ? new Date(e.enrolledAt).toLocaleDateString() : "—"}
                   </TableCell>
                   <TableCell><Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(e.enrollmentId); }}><Trash2 className="h-4 w-4" /></Button></TableCell>
                 </TableRow>
@@ -484,8 +506,8 @@ function SectionPanel() {
             <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Title</TableHead><TableHead>Duration</TableHead><TableHead>Course</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((s: any) => (
-                <TableRow key={s.id}>
-                  <TableCell>{s.sectionId}</TableCell><TableCell>{s.title}</TableCell><TableCell>{s.duration}</TableCell><TableCell>{courses?.find((c) => c.courseId === s.courseId)?.title || s.courseId}</TableCell>
+                <TableRow key={s.sectionId || s.id}>
+                  <TableCell>{s.sectionId}</TableCell><TableCell>{s.title}</TableCell><TableCell>{s.duration}</TableCell><TableCell>{s.courseName || courses?.find((c) => c.courseId === s.courseId)?.title || s.courseId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <SectionDialog mode="edit" initial={s} courses={courses || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-sections"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(s.sectionId); }}><Trash2 className="h-4 w-4" /></Button>
@@ -555,7 +577,7 @@ function QuizPanel() {
             <TableBody>
               {list.data?.map((q: any) => (
                 <TableRow key={q.quizId}>
-                  <TableCell>{q.quizId}</TableCell><TableCell>{q.title}</TableCell><TableCell>{q.totalPoints}</TableCell><TableCell>{lessons?.find((l) => l.id === q.lessonId)?.title || q.lessonId}</TableCell>
+                  <TableCell>{q.quizId}</TableCell><TableCell>{q.title}</TableCell><TableCell>{q.totalPoints}</TableCell><TableCell>{q.lessonName || lessons?.find((l) => l.lessonId === q.lessonId)?.title || q.lessonId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <QuizDialog mode="edit" initial={q} lessons={lessons || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-quizzes"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.quizId); }}><Trash2 className="h-4 w-4" /></Button>
@@ -620,11 +642,14 @@ function QuestionPanel() {
       {list.isLoading ? <Skeleton className="h-40" /> : (
         <div className="rounded-md border border-border bg-card">
           <Table>
-            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Question</TableHead><TableHead>Quiz</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Question</TableHead><TableHead>Points</TableHead><TableHead>Quiz</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
             <TableBody>
               {list.data?.map((q: any) => (
                 <TableRow key={q.questionId}>
-                  <TableCell>{q.questionId}</TableCell><TableCell className="max-w-xs truncate">{q.questionText}</TableCell><TableCell>{quizzes?.find((z) => z.id === q.quizId)?.title || q.quizId}</TableCell>
+                  <TableCell>{q.questionId}</TableCell>
+                  <TableCell className="max-w-xs truncate">{q.questionText}</TableCell>
+                  <TableCell><Badge variant="outline">{q.point != null ? `${q.point} pts` : "Auto"}</Badge></TableCell>
+                  <TableCell>{quizzes?.find((z) => z.quizId === q.quizId)?.title || q.quizId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <QuestionDialog mode="edit" initial={q} quizzes={quizzes || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-questions"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(q.questionId); }}><Trash2 className="h-4 w-4" /></Button>
@@ -641,12 +666,16 @@ function QuestionPanel() {
 
 function QuestionDialog({ mode, initial, quizzes, onSaved }: { mode: "create" | "edit"; initial?: any; quizzes: any[]; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<any>(() => initial || { questionText: "", quizId: "" });
+  const [form, setForm] = useState<any>(() => initial || { questionText: "", point: "", quizId: "" });
   const [error, setError] = useState<unknown>(null);
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { ...form, quizId: Number(form.quizId) };
+      const body = {
+        ...form,
+        quizId: Number(form.quizId),
+        point: form.point === "" || form.point == null ? null : Number(form.point),
+      };
       if (mode === "create") return api("/api/questions", { method: "POST", body });
       return api(`/api/questions/${initial.questionId}`, { method: "PUT", body });
     },
@@ -655,13 +684,22 @@ function QuestionDialog({ mode, initial, quizzes, onSaved }: { mode: "create" | 
   });
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { questionText: "", quizId: "" }); setError(null); } }}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setForm(initial || { questionText: "", point: "", quizId: "" }); setError(null); } }}>
       <DialogTrigger asChild>{mode === "create" ? <Button size="sm"><Plus className="mr-1 h-4 w-4" />New question</Button> : <Button size="icon" variant="ghost"><HelpCircle className="h-4 w-4" /></Button>}</DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>{mode === "create" ? "New question" : "Edit question"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <ApiAlert error={error} />
           <div className="space-y-1"><Label>Question</Label><Textarea value={form.questionText} onChange={(e) => setForm({ ...form, questionText: e.target.value })} /></div>
+          <div className="space-y-1">
+            <Label>Point Value</Label>
+            <Input
+              type="number"
+              placeholder="e.g. 1"
+              value={form.point ?? ""}
+              onChange={(e) => setForm({ ...form, point: e.target.value })}
+            />
+          </div>
           <div className="space-y-1"><Label>Quiz</Label>
             <Select value={String(form.quizId)} onValueChange={(v) => setForm({ ...form, quizId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -692,7 +730,7 @@ function AnswerPanel() {
             <TableBody>
               {list.data?.map((a: any) => (
                 <TableRow key={a.answerId}>
-                  <TableCell>{a.answerId}</TableCell><TableCell className="max-w-xs truncate">{a.answerText}</TableCell><TableCell>{a.isCorrect ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell><TableCell>{questions?.find((q) => q.id === a.questionId)?.questionText?.substring(0, 30) || a.questionId}</TableCell>
+                  <TableCell>{a.answerId}</TableCell><TableCell className="max-w-xs truncate">{a.answerText}</TableCell><TableCell>{a.isCorrect ? <Badge>Yes</Badge> : <Badge variant="secondary">No</Badge>}</TableCell><TableCell>{questions?.find((q) => q.questionId === a.questionId)?.questionText?.substring(0, 30) || a.questionId}</TableCell>
                   <TableCell className="space-x-1 text-right">
                     <AnswerDialog mode="edit" initial={a} questions={questions || []} onSaved={() => qc.invalidateQueries({ queryKey: ["admin-answers"] })} />
                     <Button size="icon" variant="ghost" onClick={() => { if (confirm("Delete?")) del.mutate(a.answerId); }}><Trash2 className="h-4 w-4" /></Button>
@@ -778,10 +816,12 @@ function AdminUsers() {
   const [open, setOpen] = useState(false);
 
   const emptyForm = {
+    fullName: "",
+    phoneNumber: "",
     email: "",
     username: "",
     password: "",
-    role: "USER",
+    role: "STUDENT",
   };
 
   const [form, setForm] = useState<any>(emptyForm);
@@ -790,9 +830,10 @@ function AdminUsers() {
       useState<any>(null);
 
   const USER_ROLES = [
-    "USER",
+    "STUDENT",
     "INSTRUCTOR",
     "ADMIN",
+    "USER",
   ];
 
   const list = useQuery<any[]>({
@@ -988,6 +1029,7 @@ function AdminUsers() {
                     <TableHead>ID</TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead className="text-right">
                       Actions
@@ -1000,15 +1042,22 @@ function AdminUsers() {
 
                       <TableRow key={u.id}>
                         <TableCell>
-                          {u.id}
+                          <span className="font-mono text-xs">{u.id}</span>
+                          {u.userId && <span className="block text-[10px] text-muted-foreground font-mono truncate max-w-[120px]">{u.userId}</span>}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="font-medium">
                           {u.username}
                         </TableCell>
 
                         <TableCell>
                           {u.email}
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge variant={u.isVerified ? "default" : "outline"} className="text-xs">
+                            {u.isVerified ? "Verified" : "Unverified"}
+                          </Badge>
                         </TableCell>
 
                         <TableCell>
@@ -1041,26 +1090,6 @@ function AdminUsers() {
                         </TableCell>
 
                         <TableCell className="space-x-1 text-right">
-                          <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditing(u);
-
-                                setForm({
-                                  email: u.email,
-                                  username:
-                                  u.username,
-                                  password: "",
-                                  role: u.role,
-                                });
-
-                                setOpen(true);
-                              }}
-                          >
-                            <Users className="h-4 w-4" />
-                          </Button>
-
                           <Button
                               size="icon"
                               variant="ghost"
@@ -1100,6 +1129,32 @@ function AdminUsers() {
             </DialogHeader>
 
             <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Full Name</Label>
+                <Input
+                    value={form.fullName || ""}
+                    onChange={(e) =>
+                        setForm({
+                          ...form,
+                          fullName: e.target.value,
+                        })
+                    }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Phone Number</Label>
+                <Input
+                    value={form.phoneNumber || ""}
+                    onChange={(e) =>
+                        setForm({
+                          ...form,
+                          phoneNumber: e.target.value,
+                        })
+                    }
+                />
+              </div>
+
               <div className="space-y-1">
                 <Label>Email</Label>
 

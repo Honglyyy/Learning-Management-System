@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { api, mediaUrl } from "@/lib/api";
 import { ApiAlert } from "@/components/ApiAlert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Clock, User, ArrowRight, BookOpen, Award, Users, Zap } from "lucide-react";
+import { Search, Clock, User, ArrowRight, BookOpen, Award, Users, Zap, Star } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,6 +24,8 @@ type Course = {
   price?: number;
   overallDuration?: string;
   coverDir?: string;
+  coverUrl?: string;
+  coverPublicId?: string;
   instructorName?: string;
   instructor?: any;
   categories?: Array<{ id: number; category: string }> | string[];
@@ -361,18 +363,26 @@ function Index() {
           text-transform: uppercase;
         }
 
-        .card-category {
+        .card-categories {
           position: absolute;
           top: 12px;
           left: 12px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          max-width: calc(100% - 24px);
+        }
+
+        .card-category {
           background: var(--ink);
           color: var(--parchment);
           font-size: 10px;
           font-weight: 500;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          padding: 4px 8px;
-          border-radius: 1px;
+          padding: 3px 7px;
+          border-radius: 2px;
+          white-space: nowrap;
         }
 
         .card-body {
@@ -865,16 +875,14 @@ function Index() {
 }
 
 function CourseCard({ c, onOpen }: { c: Course; onOpen: () => void }) {
-  const cover = mediaUrl(c.coverDir);
+  const cover = mediaUrl(c.coverUrl || c.coverDir);
   const inst =
       typeof c.instructor === "object"
-          ? c.instructor?.username || c.instructor?.email
-          : c.instructorName;
-  const firstCat = (() => {
-    const cats = c.categories || [];
-    if (!cats.length) return null;
-    const raw = cats[0];
-    return typeof raw === "string" ? raw : (raw as any)?.category;
+          ? c.instructor?.fullName || c.instructor?.username || c.instructor?.email
+          : c.instructor || c.instructorName;
+  const cats = (() => {
+    const rawList = c.categories || [];
+    return rawList.map((raw: any) => (typeof raw === "string" ? raw : raw?.category)).filter(Boolean);
   })();
   const isFree = !c.price || Number(c.price) === 0;
 
@@ -887,12 +895,20 @@ function CourseCard({ c, onOpen }: { c: Course; onOpen: () => void }) {
           ) : (
               <div className="card-cover-empty">No preview</div>
           )}
-          {firstCat && <span className="card-category">{firstCat}</span>}
+          {cats.length > 0 && (
+            <div className="card-categories">
+              {cats.slice(0, 2).map((cat: string) => (
+                <span key={cat} className="card-category">{cat}</span>
+              ))}
+              {cats.length > 2 && (
+                <span className="card-category">+{cats.length - 2}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="card-body">
           <div className="card-title">{c.title}</div>
-          {c.instructor && <div className="card-desc"><span className={"text-black"}>Instructor: </span>{c.instructor}</div>}
           {c.description && <div className="card-desc">{c.description}</div>}
           <div className="card-meta">
             {inst && (
@@ -903,6 +919,11 @@ function CourseCard({ c, onOpen }: { c: Course; onOpen: () => void }) {
             {c.overallDuration && (
                 <span className="card-meta-item">
               <Clock size={11} /> {c.overallDuration}
+            </span>
+            )}
+            {c.rating != null && Number(c.rating) > 0 && (
+                <span className="card-meta-item text-amber-700 font-medium">
+              <Star size={11} className="fill-amber-500 text-amber-500" /> {Number(c.rating).toFixed(1)}
             </span>
             )}
           </div>

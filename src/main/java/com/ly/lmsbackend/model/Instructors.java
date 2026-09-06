@@ -14,7 +14,16 @@ import java.util.List;
 public class Instructors {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "instructor_id")
     private Long id;
+
+    public Long getInstructorId() {
+        return this.id;
+    }
+
+    public void setInstructorId(Long instructorId) {
+        this.id = instructorId;
+    }
 
     @OneToOne(optional = false)
     @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true, nullable = false)
@@ -37,11 +46,12 @@ public class Instructors {
 
     private String expertise; // e.g. "Spring Boot, Cloud Architecture"
 
+    @Builder.Default
     @Column(name = "average_rating")
     private Double averageRating = 5.0;
 
-    @OneToMany(mappedBy = "instructor", cascade = CascadeType.ALL)
-    private List<Courses> courses;
+//    @OneToMany(mappedBy = "instructor", cascade = CascadeType.ALL)
+//    private List<Courses> courses;
 
     @CreationTimestamp
     private Timestamp createdAt;

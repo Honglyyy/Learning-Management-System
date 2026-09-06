@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { decodeJwt, getToken, setToken, type JwtClaims } from "./api";
 
-export type Role = "ADMIN" | "INSTRUCTOR" | "USER";
+export type Role = "ADMIN" | "INSTRUCTOR" | "USER" | "STUDENT";
 
 type AuthCtx = {
   token: string | null;
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthCtx>(() => {
     const claims = decodeJwt(token);
     const rawRole = (claims?.role as string | undefined)?.toUpperCase();
-    const role = (rawRole === "ADMIN" || rawRole === "INSTRUCTOR" || rawRole === "USER"
+    const role = (rawRole === "ADMIN" || rawRole === "INSTRUCTOR" || rawRole === "USER" || rawRole === "STUDENT"
       ? (rawRole as Role)
       : null);
     return {

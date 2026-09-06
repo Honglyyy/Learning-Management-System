@@ -15,7 +15,16 @@ import java.util.List;
 public class Students {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "student_id")
     private Long id;
+
+    public Long getStudentId() {
+        return this.id;
+    }
+
+    public void setStudentId(Long studentId) {
+        this.id = studentId;
+    }
 
     @OneToOne(optional = false)
     @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true, nullable = false)
@@ -45,12 +54,12 @@ public class Students {
     @Column(name = "profile_photo_public_id")
     private String profilePhotoPublicId;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
-    private List<Enrollments> enrollments;
-
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
-    private List<QuizAttempt> quizAttempts;
-
+//    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
+//    private List<Enrollments> enrollments;
+//
+//    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
+//    private List<QuizAttempt> quizAttempts;
+//
 //    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
 //    private List<AssignmentSubmission> assignmentSubmissions;
 

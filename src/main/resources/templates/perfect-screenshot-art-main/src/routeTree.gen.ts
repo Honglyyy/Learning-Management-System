@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyOtpRouteImport } from './routes/verify-otp'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InstructorsRouteImport } from './routes/instructors'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InstructorIndexRouteImport } from './routes/instructor.index'
@@ -37,9 +39,19 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstructorsRoute = InstructorsRouteImport.update({
+  id: '/instructors',
+  path: '/instructors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -86,7 +98,9 @@ const LessonsLessonIdQuizRoute = LessonsLessonIdQuizRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/instructors': typeof InstructorsRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-otp': typeof VerifyOtpRoute
@@ -100,7 +114,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/instructors': typeof InstructorsRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-otp': typeof VerifyOtpRoute
@@ -115,7 +131,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/instructors': typeof InstructorsRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-otp': typeof VerifyOtpRoute
@@ -131,7 +149,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/forgot-password'
+    | '/instructors'
     | '/login'
+    | '/profile'
     | '/register'
     | '/reset-password'
     | '/verify-otp'
@@ -145,7 +165,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/forgot-password'
+    | '/instructors'
     | '/login'
+    | '/profile'
     | '/register'
     | '/reset-password'
     | '/verify-otp'
@@ -159,7 +181,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/forgot-password'
+    | '/instructors'
     | '/login'
+    | '/profile'
     | '/register'
     | '/reset-password'
     | '/verify-otp'
@@ -174,7 +198,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InstructorsRoute: typeof InstructorsRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyOtpRoute: typeof VerifyOtpRoute
@@ -209,11 +235,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/instructors': {
+      id: '/instructors'
+      path: '/instructors'
+      fullPath: '/instructors'
+      preLoaderRoute: typeof InstructorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -278,7 +318,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InstructorsRoute: InstructorsRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyOtpRoute: VerifyOtpRoute,

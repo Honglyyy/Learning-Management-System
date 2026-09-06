@@ -23,19 +23,17 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
-    final CustomUserDetailService customUserDetailService;
-    final JwtFilter jwtFilter;
-
-    public SecurityConfig(CustomUserDetailService customUserDetailService, JwtFilter jwtFilter) {
-        this.customUserDetailService = customUserDetailService;
-        this.jwtFilter = jwtFilter;
-    }
+    private final CustomUserDetailService customUserDetailService;
+    private final JwtFilter jwtFilter;
 
 
     @Bean
@@ -47,7 +45,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/app/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/categories", "/api/reviews").permitAll()
+                        .requestMatchers("/api/instructors/me", "/api/instructors/me/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/**", "/api/categories", "/api/categories/**", "/api/reviews", "/api/reviews/**", "/api/instructors", "/api/instructors/**").permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/register", "/register/", "/register/**",

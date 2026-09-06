@@ -37,14 +37,13 @@ public class Users implements UserDetails {
     @Column(unique = true,  nullable = false)
     private String email;
 
-    @Column(unique = true, nullable = false)
     private String fullname;
 
-    @Column(unique = true, nullable = false)
     private String phoneNumber;
 
     private String otp;
     private Long verifyOtpExpireAt;
+    @Builder.Default
     private Boolean isVerified = false;
 
     private String resetOtp;
@@ -69,9 +68,14 @@ public class Users implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Set<SimpleGrantedAuthority> authorities = new HashSet<>();
-
-        authorities.add(new SimpleGrantedAuthority("ROLE_"+role.name()));
-
+        if (role != null) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
+            if (role == Roles.USER) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_STUDENT"));
+            } else if (role == Roles.STUDENT) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+            }
+        }
         return authorities;
     }
 

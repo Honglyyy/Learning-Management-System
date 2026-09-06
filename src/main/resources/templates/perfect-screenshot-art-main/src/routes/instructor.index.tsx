@@ -78,6 +78,13 @@ import {
     Trash2,
     Play,
     Users,
+    Camera,
+    User,
+    Lock,
+    Save,
+    Star,
+    BookOpen,
+    Mail,
 } from "lucide-react";
 
 export const Route = createFileRoute("/instructor/")({
@@ -101,12 +108,20 @@ function Page() {
                     <TabsList>
                         <TabsTrigger value="courses">My Courses</TabsTrigger>
                         <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
+                        <TabsTrigger value="profile">Profile & Bio</TabsTrigger>
+                        <TabsTrigger value="security">Security</TabsTrigger>
                     </TabsList>
                     <TabsContent value="courses">
                         <MyCourses />
                     </TabsContent>
                     <TabsContent value="enrollments">
                         <InstructorEnrollments />
+                    </TabsContent>
+                    <TabsContent value="profile">
+                        <InstructorProfileTab />
+                    </TabsContent>
+                    <TabsContent value="security">
+                        <InstructorSecurityTab />
                     </TabsContent>
                 </Tabs>
             </div>
@@ -190,9 +205,9 @@ function CourseCard({
 
     return (
         <Card className="overflow-hidden border shadow-sm flex flex-col">
-            {course.coverDir && (
+            {(course.coverUrl || course.coverDir) && (
                 <img
-                    src={mediaUrl(course.coverDir)}
+                    src={mediaUrl(course.coverUrl || course.coverDir)}
                     alt={course.title}
                     className="aspect-video w-full object-cover"
                 />
@@ -200,7 +215,21 @@ function CourseCard({
 
             <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg leading-snug">{course.title}</CardTitle>
+                    <div className="space-y-1 flex-1">
+                        <CardTitle className="text-lg leading-snug">{course.title}</CardTitle>
+                        {course.categories && course.categories.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                                {course.categories.map((cat: any) => {
+                                    const name = typeof cat === "string" ? cat : cat?.category;
+                                    return name ? (
+                                        <Badge key={name} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                            {name}
+                                        </Badge>
+                                    ) : null;
+                                })}
+                            </div>
+                        )}
+                    </div>
                     <div className="flex shrink-0 gap-1">
                         <EditCourseDialog course={course} onSaved={onMutated} />
                         <Button
@@ -223,14 +252,22 @@ function CourseCard({
                 </p>
 
                 <div className="flex items-center justify-between text-sm">
-          <span className="font-semibold">
-            ${Number(course.price ?? 0).toFixed(2)}
-          </span>
-                    {course.overallDuration && (
-                        <span className="text-muted-foreground">
-              {course.overallDuration}
-            </span>
-                    )}
+                    <span className="font-semibold">
+                        ${Number(course.price ?? 0).toFixed(2)}
+                    </span>
+                    <div className="flex items-center gap-3">
+                        {course.rating != null && Number(course.rating) > 0 && (
+                            <span className="flex items-center gap-1 text-xs font-medium text-amber-600">
+                                <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                                {Number(course.rating).toFixed(1)}
+                            </span>
+                        )}
+                        {course.overallDuration && (
+                            <span className="text-muted-foreground">
+                                {course.overallDuration}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── Sections ─────────────────────────────────────────────────── */}
@@ -1053,6 +1090,8 @@ function CreateCourseDialog({ onCreated }: { onCreated: () => void }) {
         description: "",
         price: 0,
         overallDuration: "",
+        coverUrl: "",
+        coverPublicId: "",
         coverDir: "",
         categoryId: [],
     });
@@ -1079,7 +1118,12 @@ function CreateCourseDialog({ onCreated }: { onCreated: () => void }) {
                 method: "POST",
                 formData: fd,
             });
-            setForm((f: any) => ({ ...f, coverDir: res.url }));
+            setForm((f: any) => ({
+                ...f,
+                coverUrl: res.url,
+                coverPublicId: res.publicId,
+                coverDir: res.url,
+            }));
             toast.success("Cover uploaded");
         } catch (e) {
             setError(e);
@@ -1102,6 +1146,8 @@ function CreateCourseDialog({ onCreated }: { onCreated: () => void }) {
                 description: "",
                 price: 0,
                 overallDuration: "",
+                coverUrl: "",
+                coverPublicId: "",
                 coverDir: "",
                 categoryId: [],
             });
@@ -1153,8 +1199,10 @@ function EditCourseDialog({
         description: course.description,
         price: course.price,
         overallDuration: course.overallDuration ?? "",
-        coverDir: course.coverDir ?? "",
-        categoryId: course.categoryId ?? [],
+        coverUrl: course.coverUrl ?? course.coverDir ?? "",
+        coverPublicId: course.coverPublicId ?? "",
+        coverDir: course.coverUrl ?? course.coverDir ?? "",
+        categoryId: course.categoryId ?? course.categoryIds ?? [],
     });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
@@ -1179,7 +1227,12 @@ function EditCourseDialog({
                 method: "POST",
                 formData: fd,
             });
-            setForm((f: any) => ({ ...f, coverDir: res.url }));
+            setForm((f: any) => ({
+                ...f,
+                coverUrl: res.url,
+                coverPublicId: res.publicId,
+                coverDir: res.url,
+            }));
             toast.success("Cover uploaded");
         } catch (e) {
             setError(e);
@@ -1298,6 +1351,13 @@ function CourseFormFields({
                     />
                     {uploading && <Upload className="h-4 w-4 animate-pulse" />}
                 </div>
+                {(form.coverUrl || form.coverDir) && (
+                    <img
+                        src={mediaUrl(form.coverUrl || form.coverDir)}
+                        alt="Cover"
+                        className="mt-2 h-20 rounded object-cover"
+                    />
+                )}
             </div>
         </div>
     );
@@ -1445,7 +1505,7 @@ function CreateLessonDialog({
     onSaved: () => void;
 }) {
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ title: "", videoDir: "" });
+    const [form, setForm] = useState({ title: "", videoUrl: "", videoPublicId: "", videoDir: "" });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
 
@@ -1458,7 +1518,12 @@ function CreateLessonDialog({
                 method: "POST",
                 formData: fd,
             });
-            setForm((f) => ({ ...f, videoDir: res.url }));
+            setForm((f) => ({
+                ...f,
+                videoUrl: res.url,
+                videoPublicId: res.publicId,
+                videoDir: res.url,
+            }));
             toast.success("Video uploaded");
         } catch (e) {
             setError(e);
@@ -1476,7 +1541,7 @@ function CreateLessonDialog({
         onSuccess: () => {
             toast.success("Lesson created");
             setOpen(false);
-            setForm({ title: "", videoDir: "" });
+            setForm({ title: "", videoUrl: "", videoPublicId: "", videoDir: "" });
             onSaved();
         },
         onError: (e) => setError(e),
@@ -1523,7 +1588,9 @@ function EditLessonDialog({
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState({
         title: lesson.title,
-        videoDir: lesson.videoDir ?? "",
+        videoUrl: lesson.videoUrl ?? lesson.videoDir ?? "",
+        videoPublicId: lesson.videoPublicId ?? "",
+        videoDir: lesson.videoUrl ?? lesson.videoDir ?? "",
     });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
@@ -1537,7 +1604,12 @@ function EditLessonDialog({
                 method: "POST",
                 formData: fd,
             });
-            setForm((f) => ({ ...f, videoDir: res.url }));
+            setForm((f) => ({
+                ...f,
+                videoUrl: res.url,
+                videoPublicId: res.publicId,
+                videoDir: res.url,
+            }));
             toast.success("Video uploaded");
         } catch (e) {
             setError(e);
@@ -1611,9 +1683,9 @@ function LessonFormFields({ form, setForm, uploading, onUpload, error }: any) {
                     />
                     {uploading && <Upload className="h-4 w-4 animate-pulse" />}
                 </div>
-                {form.videoDir && (
+                {(form.videoUrl || form.videoDir) && (
                     <p className="text-xs text-muted-foreground truncate">
-                        {form.videoDir}
+                        {form.videoUrl || form.videoDir}
                     </p>
                 )}
             </div>
@@ -1983,4 +2055,301 @@ function formatDate(value?: string | number | null) {
     if (Number.isNaN(date.getTime())) return "-";
 
     return date.toLocaleDateString();
+}
+
+// ---------------------------------------------------------------------------
+// Instructor Profile & Bio
+// ---------------------------------------------------------------------------
+
+function InstructorProfileTab() {
+    const qc = useQueryClient();
+    const { data: profile, isLoading, error } = useQuery<any>({
+        queryKey: ["instructor-me-profile"],
+        queryFn: () => api("/api/instructors/me"),
+    });
+
+    const [form, setForm] = useState<any>({
+        fullName: "",
+        phoneNumber: "",
+        biography: "",
+        expertise: "",
+        gender: "NOT_SPECIFIC",
+        dateOfBirth: "",
+    });
+
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [photoError, setPhotoError] = useState<unknown>(null);
+
+    // Sync loaded profile into form
+    const [initialized, setInitialized] = useState(false);
+    if (profile && !initialized) {
+        setForm({
+            fullName: profile.fullName || "",
+            phoneNumber: profile.phoneNumber || "",
+            biography: profile.biography || "",
+            expertise: profile.expertise || "",
+            gender: profile.gender || "NOT_SPECIFIC",
+            dateOfBirth: profile.dateOfBirth || "",
+        });
+        setInitialized(true);
+    }
+
+    const updateProfile = useMutation({
+        mutationFn: () =>
+            api("/api/instructors/me", {
+                method: "PUT",
+                body: form,
+            }),
+        onSuccess: (updated) => {
+            qc.setQueryData(["instructor-me-profile"], updated);
+            toast.success("Instructor profile updated!");
+        },
+        onError: (err: any) => {
+            toast.error(err.message || "Failed to update profile");
+        },
+    });
+
+    async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingPhoto(true);
+        setPhotoError(null);
+        try {
+            const fd = new FormData();
+            fd.append("file", file);
+            const updated = await api<any>("/api/instructors/me/photo", {
+                method: "POST",
+                formData: fd,
+            });
+            qc.setQueryData(["instructor-me-profile"], updated);
+            toast.success("Profile photo updated!");
+        } catch (err) {
+            setPhotoError(err);
+            toast.error("Failed to upload photo");
+        } finally {
+            setUploadingPhoto(false);
+        }
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-primary" /> Instructor Profile
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                    This public bio and expertise will appear to students on course pages and the instructors directory.
+                </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <ApiAlert error={error || photoError} />
+
+                {isLoading ? (
+                    <div className="space-y-4">
+                        <Skeleton className="h-20 w-20 rounded-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-6">
+                            <div className="relative group">
+                                <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center">
+                                    {profile?.profilePhotoUrl ? (
+                                        <img
+                                            src={mediaUrl(profile.profilePhotoUrl)}
+                                            alt="Instructor avatar"
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : (
+                                        <User className="h-10 w-10 text-muted-foreground" />
+                                    )}
+                                </div>
+                                <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-1.5 rounded-full cursor-pointer shadow hover:bg-primary/90 transition-colors">
+                                    <Camera className="h-4 w-4" />
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handlePhotoUpload}
+                                        disabled={uploadingPhoto}
+                                    />
+                                </label>
+                            </div>
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold text-lg">{profile?.fullName || profile?.username}</h3>
+                                    {profile?.username && (
+                                        <span className="text-xs text-muted-foreground font-mono">@{profile.username}</span>
+                                    )}
+                                </div>
+                                {profile?.email && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <Mail className="h-3 w-3" /> {profile.email}
+                                    </p>
+                                )}
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    {profile?.totalCourses != null && (
+                                        <Badge variant="outline" className="gap-1 text-xs">
+                                            <BookOpen className="h-3 w-3" /> {profile.totalCourses} {profile.totalCourses === 1 ? "Course" : "Courses"}
+                                        </Badge>
+                                    )}
+                                    {profile?.averageRating != null && profile.averageRating > 0 && (
+                                        <Badge variant="secondary" className="gap-1 text-xs text-amber-600">
+                                            <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> {profile.averageRating.toFixed(1)} Rating
+                                        </Badge>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground pt-1">
+                                    {uploadingPhoto ? "Uploading photo..." : "Upload your official instructor avatar."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                updateProfile.mutate();
+                            }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                        >
+                            <div className="space-y-1">
+                                <Label>Full Name</Label>
+                                <Input
+                                    value={form.fullName}
+                                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <Label>Phone Number</Label>
+                                <Input
+                                    value={form.phoneNumber}
+                                    onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-1 md:col-span-2">
+                                <Label>Teaching Expertise / Title</Label>
+                                <Input
+                                    placeholder="e.g. Senior Software Architect, Machine Learning Specialist"
+                                    value={form.expertise}
+                                    onChange={(e) => setForm({ ...form, expertise: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-1 md:col-span-2">
+                                <Label>Biography</Label>
+                                <Textarea
+                                    rows={4}
+                                    placeholder="Share your career highlights, academic background, and teaching philosophy..."
+                                    value={form.biography}
+                                    onChange={(e) => setForm({ ...form, biography: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 flex justify-end">
+                                <Button type="submit" disabled={updateProfile.isPending}>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {updateProfile.isPending ? "Saving..." : "Save Profile"}
+                                </Button>
+                            </div>
+                        </form>
+                    </>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Instructor Security & Password
+// ---------------------------------------------------------------------------
+
+function InstructorSecurityTab() {
+    const [pwForm, setPwForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    const [pwError, setPwError] = useState<unknown>(null);
+
+    const changePw = useMutation({
+        mutationFn: () => {
+            if (pwForm.newPassword !== pwForm.confirmPassword) {
+                throw new Error("New passwords do not match");
+            }
+            return api<string>("/api/users/change-password", {
+                method: "POST",
+                body: {
+                    oldPassword: pwForm.oldPassword,
+                    newPassword: pwForm.newPassword,
+                },
+            });
+        },
+        onSuccess: () => {
+            toast.success("Password changed successfully");
+            setPwForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+            setPwError(null);
+        },
+        onError: (err: any) => {
+            setPwError(err);
+        },
+    });
+
+    return (
+        <Card className="max-w-xl">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-primary" /> Change Password
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                    Update your account password to protect your teaching studio.
+                </p>
+            </CardHeader>
+            <CardContent>
+                <ApiAlert error={pwError} />
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        changePw.mutate();
+                    }}
+                    className="space-y-4"
+                >
+                    <div className="space-y-1">
+                        <Label>Current Password</Label>
+                        <Input
+                            type="password"
+                            required
+                            value={pwForm.oldPassword}
+                            onChange={(e) => setPwForm({ ...pwForm, oldPassword: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <Label>New Password</Label>
+                        <Input
+                            type="password"
+                            required
+                            minLength={6}
+                            value={pwForm.newPassword}
+                            onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <Label>Confirm New Password</Label>
+                        <Input
+                            type="password"
+                            required
+                            minLength={6}
+                            value={pwForm.confirmPassword}
+                            onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+                        />
+                    </div>
+
+                    <Button type="submit" disabled={changePw.isPending}>
+                        <Lock className="mr-2 h-4 w-4" />
+                        {changePw.isPending ? "Updating Password..." : "Change Password"}
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
+    );
 }

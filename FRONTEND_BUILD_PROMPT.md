@@ -1,30 +1,36 @@
 # LMS Frontend Build Prompt
 
-Build a  frontend for this Spring Boot LMS backend using the existing REST APIs.
+Build a frontend for this Spring Boot LMS backend using the existing REST APIs.
 
 ## Backend API Readiness
 
-The current APIs are enough for a functional LMS prototype:
+The current APIs support a fully functional LMS:
 
-- Authentication with JWT login
-- User registration
+- Authentication with JWT login (email, phone number, or username)
+- User registration with `fullName` and `phoneNumber`
 - OTP verification
 - Password reset OTP flow
-- Course catalog
-- Course CRUD
-- Category CRUD
-- Section CRUD
-- Lesson CRUD
+- Change password for authenticated users
+- Student profile management with photo upload (Cloudinary)
+- Instructor profile management with photo upload, bio, expertise (Cloudinary)
+- Public instructor directory
+- Course catalog with detail view (nested sections, lessons, reviews)
+- Course CRUD (admin and instructor-scoped)
+- Category CRUD with course listing
+- Section CRUD (admin and instructor-scoped)
+- Lesson CRUD (admin and instructor-scoped)
 - Quiz CRUD
-- Question CRUD
+- Quiz submission and attempt scoring
+- Question CRUD with point values
 - Answer CRUD
-- Payment checkout/confirmation
+- Payment checkout/confirmation with auto-enrollment
 - Payment admin status management
-- File/media upload for course covers and lesson videos
+- File/media upload for course covers and lesson videos (Cloudinary)
 - Enrollment create/list/update/delete
-- Reviews list/create
-- Role-based access for `ADMIN`, `INSTRUCTOR`, and `USER`
-- 
+- Course reviews per course
+- Admin user management (list, update role, delete)
+- Role-based access for `ADMIN`, `INSTRUCTOR`, `STUDENT`, and `USER`
+
 ## Shared Frontend Requirements
 
 - Use plain React.
@@ -36,10 +42,12 @@ Authorization: Bearer <token>
 ```
 
 - Decode the JWT payload on the frontend to determine the user role.
+- JWT claims: `sub` = user email, `role` = role name (e.g. `STUDENT`, `INSTRUCTOR`, `ADMIN`, `USER`).
+- The backend bridges `USER` and `STUDENT` roles — they are interchangeable for access control.
 - Redirect users based on role after login:
   - `ADMIN` -> `/app/admin/dashboard.html`
   - `INSTRUCTOR` -> `/app/instructor/dashboard.html`
-  - `USER` -> `/app/user/index.html`
+  - `USER` or `STUDENT` -> `/app/user/index.html`
 - Add logout support by clearing the token.
 - Show API errors clearly in Bootstrap alerts.
 - Keep code separated by role/page.
@@ -71,6 +79,8 @@ Request:
 }
 ```
 
+Note: The `email` field accepts **email, username, or phone number** interchangeably. The backend resolves the user from any of these identifiers. Label the input field as "Email, Username, or Phone" to reflect this.
+
 Response:
 
 ```text
@@ -101,19 +111,24 @@ Request:
 
 ```json
 {
-  "email": "student@example.com",
   "username": "student1",
+  "email": "student@example.com",
   "password": "password",
-  "role": "USER"
+  "fullName": "Student Name",
+  "phoneNumber": "0123456789",
+  "role": "STUDENT"
 }
 ```
 
 Allowed roles:
 
 ```text
+STUDENT
 USER
 INSTRUCTOR
 ```
+
+Registration auto-creates a `Students` profile (with code `STU-YYYY-XXXX`) for `STUDENT`/`USER` roles, or an `Instructors` profile for `INSTRUCTOR` role.
 
 After registration, show a message telling the user to verify OTP.
 
@@ -137,6 +152,19 @@ Request:
 {
   "email": "student@example.com",
   "otp": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "userId": "uuid-string",
+  "username": "student1",
+  "email": "student@example.com",
+  "role": "STUDENT",
+  "isVerified": true
 }
 ```
 
@@ -184,6 +212,31 @@ Request:
 
 After success, redirect to login.
 
+### Change Password (Authenticated)
+
+Available on the user profile page or settings area. Requires current JWT token.
+
+API:
+
+```http
+POST /api/users/change-password
+```
+
+Request:
+
+```json
+{
+  "oldPassword": "currentPassword",
+  "newPassword": "newPassword123"
+}
+```
+
+Response:
+
+```text
+Password changed successfully
+```
+
 ## User Frontend
 
 The user frontend should sell courses and allow users to pay for and enroll in courses.
@@ -202,16 +255,35 @@ API:
 GET /api/courses
 ```
 
+Response (each item):
+
+```json
+{
+  "courseId": 1,
+  "title": "Java Basics",
+  "description": "Learn Java",
+  "price": 49.99,
+  "overallDuration": "8 hours",
+  "coverUrl": "https://res.cloudinary.com/.../cover.jpg",
+  "coverPublicId": "course-covers/abc123",
+  "instructorId": 1,
+  "instructor": "instructor_username",
+  "categoryIds": [1, 2],
+  "categories": ["Programming", "Backend"],
+  "rating": 4.5
+}
+```
+
 Display:
 
-- Course cover image
+- Course cover image (use `coverUrl`)
 - Course title
 - Description
 - Price
 - Duration
-- Instructor
+- Instructor name
 - Categories
-- Rating
+- Rating (star display)
 - Buy/enroll button
 
 Add:
@@ -220,6 +292,74 @@ Add:
 - Category badges
 - Responsive Bootstrap course cards
 - Hero section focused on selling courses
+
+### Course Detail Page
+
+Page:
+
+```text
+/app/user/course-detail.html?id={courseId}
+```
+
+API:
+
+```http
+GET /api/courses/{id}
+```
+
+Auth: Requires `ADMIN`, `INSTRUCTOR`, `USER`, or `STUDENT` role.
+
+Response:
+
+```json
+{
+  "courseId": 1,
+  "title": "Java Basics",
+  "description": "Learn Java from scratch",
+  "price": 49.99,
+  "overallDuration": "8 hours",
+  "coverUrl": "https://res.cloudinary.com/.../cover.jpg",
+  "coverPublicId": "course-covers/abc123",
+  "instructor": "instructor_username",
+  "sectionCount": 3,
+  "rating": 4.5,
+  "categories": ["Programming", "Backend"],
+  "sections": [
+    {
+      "sectionId": 1,
+      "title": "Getting Started",
+      "duration": "1 hour",
+      "lessonCount": 3,
+      "lessons": [
+        {
+          "lessonId": 1,
+          "title": "Intro Lesson",
+          "videoUrl": "https://res.cloudinary.com/.../video.mp4",
+          "videoPublicId": "lesson-videos/xyz789"
+        }
+      ]
+    }
+  ],
+  "reviews": [
+    {
+      "reviewId": 1,
+      "reviewText": "Great course!",
+      "rating": 5,
+      "username": "student1",
+      "courseTitle": "Java Basics"
+    }
+  ]
+}
+```
+
+Display:
+
+- Full course info with cover image
+- Accordion of sections with nested lesson list
+- Video preview for lessons (if enrolled)
+- Reviews list with star ratings
+- Buy/enroll button
+- Add review form (for enrolled users)
 
 ### Buy And Enroll In Course
 
@@ -258,7 +398,7 @@ Response:
   "courseTitle": "Java Basics",
   "amount": 49.99,
   "provider": "MANUAL",
-  "providerReference": "checkout_xxx",
+  "providerReference": "checkout_uuid-string",
   "status": "PENDING",
   "createdAt": "2026-05-20T10:00:00.000+00:00",
   "updatedAt": "2026-05-20T10:00:00.000+00:00"
@@ -281,7 +421,7 @@ For a real gateway such as Stripe or PayPal, replace the manual confirm button w
 
 ### My Payments
 
-Optional user page or panel:
+Page:
 
 ```text
 /app/user/payments.html
@@ -299,7 +439,7 @@ Display:
 - Amount
 - Provider
 - Provider reference
-- Status
+- Status (badge: `PENDING`, `PAID`, `FAILED`, `REFUNDED`)
 - Created date
 
 ### My Enrollments
@@ -316,13 +456,31 @@ API:
 GET /api/enrollments/me
 ```
 
+Response (each item):
+
+```json
+{
+  "enrollmentId": 1,
+  "userId": 1,
+  "username": "student1",
+  "userEmail": "student@example.com",
+  "courseId": 1,
+  "courseTitle": "Java Basics",
+  "instructor": "instructor_username",
+  "status": "ACTIVE",
+  "enrolledAt": "2026-05-20T10:00:00.000+00:00",
+  "updatedAt": "2026-05-20T10:00:00.000+00:00"
+}
+```
+
 Display:
 
 - Course title
 - Instructor
-- Status
+- Status (badge)
 - Enrolled date
 - Cancel button
+- Link to course detail page
 
 Cancel enrollment:
 
@@ -330,11 +488,222 @@ Cancel enrollment:
 DELETE /api/enrollments/me/courses/{courseId}
 ```
 
+### Student Profile
+
+Page:
+
+```text
+/app/user/profile.html
+```
+
+#### Get Profile
+
+API:
+
+```http
+GET /api/students/profile
+```
+
+Auth: `STUDENT` or `USER` role.
+
+Response:
+
+```json
+{
+  "studentId": 1,
+  "studentCode": "STU-2026-0001",
+  "username": "student1",
+  "email": "student@example.com",
+  "fullName": "Student Name",
+  "phoneNumber": "0123456789",
+  "gender": "MALE",
+  "dateOfBirth": "2000-01-15",
+  "educationLevel": "Bachelor",
+  "profilePhotoUrl": "https://res.cloudinary.com/.../photo.jpg",
+  "profilePhotoPublicId": "profile-photos/students/abc123",
+  "createdAt": "2026-01-01T00:00:00.000+00:00",
+  "updatedAt": "2026-09-05T00:00:00.000+00:00"
+}
+```
+
+Display:
+
+- Profile photo (circle avatar)
+- Student code (read-only)
+- Full name
+- Email (read-only)
+- Username (read-only)
+- Phone number
+- Gender dropdown (`MALE`, `FEMALE`, `OTHER`, `NOT_SPECIFIC`)
+- Date of birth (date picker)
+- Education level
+- Edit form
+
+#### Update Profile
+
+API:
+
+```http
+PUT /api/students/profile
+```
+
+Request:
+
+```json
+{
+  "fullName": "Updated Name",
+  "phoneNumber": "0987654321",
+  "gender": "MALE",
+  "dateOfBirth": "2000-01-15",
+  "educationLevel": "Master",
+  "profilePhotoUrl": "https://res.cloudinary.com/.../photo.jpg",
+  "profilePhotoPublicId": "profile-photos/students/abc123"
+}
+```
+
+#### Upload Profile Photo
+
+API:
+
+```http
+POST /api/students/profile/photo
+```
+
+Request:
+
+```js
+const formData = new FormData();
+formData.append("file", fileInput.files[0]);
+
+await fetch("/api/students/profile/photo", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`
+  },
+  body: formData
+});
+```
+
+Do not set the `Content-Type` header manually when sending `FormData`.
+
+Response: Updated `StudentProfileResponseDTO`.
+
+### Course Reviews
+
+Users can add reviews to courses they are enrolled in.
+
+Add review:
+
+```http
+POST /api/courses/{courseId}/review
+```
+
+Request:
+
+```json
+{
+  "reviewText": "Excellent course content!",
+  "rating": 5
+}
+```
+
+`rating` must be between 1 and 5.
+
+List reviews for a course:
+
+```http
+GET /api/courses/{courseId}/reviews
+```
+
+### Quiz Taking
+
+When a student views a lesson, they can take the associated quiz.
+
+Get quiz for a lesson:
+
+```http
+GET /api/lessons/{lessonId}/quiz
+```
+
+Response:
+
+```json
+{
+  "quizId": 1,
+  "title": "Quiz 1",
+  "totalPoints": 10.0,
+  "question": [
+    {
+      "questionId": 1,
+      "questionText": "What is Java?",
+      "point": 5,
+      "answers": [
+        {
+          "answerId": 1,
+          "answerText": "A programming language",
+          "isCorrect": true
+        },
+        {
+          "answerId": 2,
+          "answerText": "A coffee brand",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+Submit quiz:
+
+```http
+POST /api/quizzes/{quizId}/submit
+```
+
+Request:
+
+```json
+{
+  "answerIds": [1, 4, 7]
+}
+```
+
+The user must have an active enrollment in the course that contains this quiz.
+
+Response:
+
+```json
+{
+  "attemptId": 1,
+  "quizId": 1,
+  "enrollmentId": 1,
+  "earnedPoints": 8.0,
+  "totalPoints": 10.0,
+  "correctAnswers": 2,
+  "totalQuestions": 3,
+  "submittedAt": "2026-09-05T10:00:00.000+00:00",
+  "updatedAt": "2026-09-05T10:00:00.000+00:00"
+}
+```
+
+Get my past attempt:
+
+```http
+GET /api/quizzes/{quizId}/attempt/me
+```
+
+Display:
+
+- Question list with radio buttons for each answer
+- Submit button
+- After submission, show score breakdown (earned/total points, correct/total questions)
+- If already attempted, show previous results
+
 ## File Uploads
 
-The backend supports multipart uploads for course cover images and lesson videos. Uploaded files are stored under the configured upload directory and served publicly from `/uploads/**`.
+The backend uses **Cloudinary** for file storage. Uploaded files are stored on Cloudinary and the response returns a `url` (Cloudinary secure URL) and `publicId` (for deletion).
 
-Use these upload APIs from admin and instructor forms before creating or updating courses/lessons. Save the returned `url` into `coverDir` or `videoDir`.
+Use these upload APIs from admin and instructor forms before creating or updating courses/lessons. Save the returned `url` and `publicId` into the appropriate fields.
 
 Do not set the `Content-Type` header manually when sending `FormData`; the browser will add the multipart boundary.
 
@@ -384,18 +753,19 @@ Response:
 ```json
 {
   "originalFileName": "cover.jpg",
-  "fileName": "generated-name.jpg",
+  "publicId": "course-covers/generated-name",
   "contentType": "image/jpeg",
   "size": 120000,
-  "url": "/uploads/course-covers/generated-name.jpg"
+  "url": "https://res.cloudinary.com/.../generated-name.jpg"
 }
 ```
 
-Use the returned URL in course create/update:
+Use the returned URL and publicId in course create/update:
 
 ```json
 {
-  "coverDir": "/uploads/course-covers/generated-name.jpg"
+  "coverUrl": "https://res.cloudinary.com/.../generated-name.jpg",
+  "coverPublicId": "course-covers/generated-name"
 }
 ```
 
@@ -445,18 +815,19 @@ Response:
 ```json
 {
   "originalFileName": "lesson.mp4",
-  "fileName": "generated-name.mp4",
+  "publicId": "lesson-videos/generated-name",
   "contentType": "video/mp4",
   "size": 5000000,
-  "url": "/uploads/lesson-videos/generated-name.mp4"
+  "url": "https://res.cloudinary.com/.../generated-name.mp4"
 }
 ```
 
-Use the returned URL in lesson create/update:
+Use the returned URL and publicId in lesson create/update:
 
 ```json
 {
-  "videoDir": "/uploads/lesson-videos/generated-name.mp4"
+  "videoUrl": "https://res.cloudinary.com/.../generated-name.mp4",
+  "videoPublicId": "lesson-videos/generated-name"
 }
 ```
 
@@ -473,6 +844,7 @@ Page:
 Use a sidebar layout with sections:
 
 - Overview
+- Users
 - Courses
 - Categories
 - Sections
@@ -482,9 +854,91 @@ Use a sidebar layout with sections:
 - Answers
 - Payments
 - Enrollments
-- Admin users
+- Reviews
 
 Only allow users with role `ADMIN`.
+
+### Admin Users Management
+
+List all users:
+
+```http
+GET /api/users
+```
+
+Response (each item):
+
+```json
+{
+  "id": 1,
+  "userId": "uuid-string",
+  "username": "student1",
+  "email": "student@example.com",
+  "role": "STUDENT",
+  "isVerified": true
+}
+```
+
+Update user role:
+
+```http
+PATCH /api/users/{id}/role
+```
+
+Body:
+
+```json
+{
+  "role": "INSTRUCTOR"
+}
+```
+
+Valid roles:
+
+```text
+STUDENT
+USER
+INSTRUCTOR
+ADMIN
+```
+
+When role is changed to `STUDENT`/`USER`, the backend auto-creates a `Students` profile if missing. When changed to `INSTRUCTOR`, the backend auto-creates an `Instructors` profile.
+
+Delete user:
+
+```http
+DELETE /api/users/{id}
+```
+
+This cascades to delete all associated profiles, enrollments, payments, quiz attempts, reviews, and instructor-owned courses.
+
+Admin users table should show:
+
+- User ID
+- Username
+- Email
+- Role dropdown
+- Verified status badge
+- Delete button
+
+Create admin:
+
+```http
+POST /admin/register
+```
+
+Body:
+
+```json
+{
+  "username": "admin2",
+  "email": "admin@example.com",
+  "password": "password",
+  "fullName": "Admin Name",
+  "phoneNumber": "0123456789",
+  "role": "ADMIN"
+}
+```
 
 ### Admin Courses CRUD
 
@@ -520,7 +974,8 @@ Body:
   "description": "Learn Java",
   "price": 49.99,
   "overallDuration": "8 hours",
-  "coverDir": "/uploads/course-covers/generated-name.jpg",
+  "coverUrl": "https://res.cloudinary.com/.../cover.jpg",
+  "coverPublicId": "course-covers/abc123",
   "instructor": 1,
   "categoryId": [1, 2]
 }
@@ -532,6 +987,33 @@ List:
 
 ```http
 GET /api/categories
+```
+
+Get category with courses:
+
+```http
+GET /api/categories/{id}
+```
+
+Response:
+
+```json
+{
+  "categoryId": 1,
+  "category": "Programming",
+  "courses": [
+    {
+      "courseId": 1,
+      "title": "Java Basics",
+      "description": "Learn Java",
+      "price": 49.99,
+      "overallDuration": "8 hours",
+      "coverUrl": "https://...",
+      "coverPublicId": "...",
+      "instructor": "instructor_username"
+    }
+  ]
+}
 ```
 
 Create:
@@ -604,6 +1086,12 @@ List:
 GET /api/lessons
 ```
 
+Get lesson detail with quiz:
+
+```http
+GET /api/lessons/{id}
+```
+
 Create:
 
 ```http
@@ -627,7 +1115,8 @@ Body:
 ```json
 {
   "title": "Intro Lesson",
-  "videoDir": "/uploads/lesson-videos/generated-name.mp4",
+  "videoUrl": "https://res.cloudinary.com/.../video.mp4",
+  "videoPublicId": "lesson-videos/abc123",
   "sectionId": 1
 }
 ```
@@ -638,6 +1127,12 @@ List:
 
 ```http
 GET /api/quizzes
+```
+
+Get quiz for a lesson:
+
+```http
+GET /api/lessons/{lessonId}/quiz
 ```
 
 Create:
@@ -699,6 +1194,7 @@ Body:
 ```json
 {
   "questionText": "What is Java?",
+  "point": 5,
   "quizId": 1
 }
 ```
@@ -738,8 +1234,6 @@ Body:
   "questionId": 1
 }
 ```
-
-### Admin Enrollments
 
 ### Admin Payments
 
@@ -792,7 +1286,7 @@ Admin payment table should show:
 - Status dropdown
 - Delete button
 
-When an admin changes a payment to `PAID`, the backend should create the course enrollment for that student.
+When an admin changes a payment to `PAID`, the backend automatically creates the course enrollment for that student.
 
 ### Admin Enrollments
 
@@ -846,26 +1340,64 @@ COMPLETED
 CANCELLED
 ```
 
-### Admin Creation
+### Admin Reviews
 
-Create admin:
+List all reviews:
 
 ```http
-POST /admin/register
+GET /api/reviews
 ```
 
-Body:
+List reviews for a course:
+
+```http
+GET /api/courses/{courseId}/reviews
+```
+
+Admin reviews table should show:
+
+- Review ID
+- Username
+- Course title
+- Rating (stars)
+- Review text
+- Filter by course
+
+### Admin Instructors Directory
+
+List all instructors (public):
+
+```http
+GET /api/instructors
+```
+
+View instructor detail:
+
+```http
+GET /api/instructors/{id}
+```
+
+Response:
 
 ```json
 {
-  "email": "admin@example.com",
-  "username": "admin2",
-  "password": "password",
-  "role": "ADMIN"
+  "instructorId": 1,
+  "userId": 1,
+  "username": "instructor1",
+  "email": "instructor@example.com",
+  "fullName": "Instructor Name",
+  "phoneNumber": "0123456789",
+  "profilePhotoUrl": "https://res.cloudinary.com/.../photo.jpg",
+  "profilePhotoPublicId": "profile-photos/instructors/abc123",
+  "biography": "Expert in Spring Boot",
+  "expertise": "Spring Boot, Cloud Architecture",
+  "averageRating": 4.8,
+  "totalCourses": 5,
+  "courses": [...],
+  "createdAt": "2026-01-01T00:00:00.000+00:00",
+  "updatedAt": "2026-09-05T00:00:00.000+00:00"
 }
 ```
-
-Note: the backend does not currently expose a full users CRUD/list endpoint, so the admin dashboard can create admins but cannot list all users unless a user management API is added.
 
 ## Instructor Dashboard
 
@@ -879,21 +1411,82 @@ Only allow users with role `INSTRUCTOR` or `ADMIN`.
 
 Instructor should be able to:
 
+- View and edit their profile
 - View their courses
-- Create their courses
+- Create/update/delete their courses
+- Manage sections for their courses
+- Manage lessons for their sections
 - View enrollments for courses they manage
 - View enrolled students for a selected course
-- Update enrollment statuses if allowed by backend
+- Update enrollment statuses
+
+### Instructor Profile
+
+Get profile:
+
+```http
+GET /api/instructors/me
+```
+
+Update profile:
+
+```http
+PUT /api/instructors/me
+```
+
+Body:
+
+```json
+{
+  "fullName": "Updated Instructor Name",
+  "phoneNumber": "0987654321",
+  "biography": "Experienced developer and educator",
+  "expertise": "Spring Boot, Microservices, Cloud",
+  "profilePhotoUrl": "https://res.cloudinary.com/.../photo.jpg",
+  "profilePhotoPublicId": "profile-photos/instructors/abc123"
+}
+```
+
+Upload profile photo:
+
+```http
+POST /api/instructors/me/photo
+```
+
+Request:
+
+```js
+const formData = new FormData();
+formData.append("file", fileInput.files[0]);
+
+await fetch("/api/instructors/me/photo", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${token}`
+  },
+  body: formData
+});
+```
+
+Display:
+
+- Profile photo with upload button
+- Full name
+- Phone number
+- Biography (textarea)
+- Expertise
+- Average rating (read-only)
+- Total courses count (read-only)
 
 ### Instructor Courses
 
-Use:
+List my courses:
 
 ```http
 GET /api/courses/instructor/me
 ```
 
-Create:
+Create my course:
 
 ```http
 POST /api/courses/instructor/me
@@ -907,13 +1500,102 @@ Body:
   "description": "Learn backend development",
   "price": 39.99,
   "overallDuration": "6 hours",
-  "coverDir": "/uploads/course-covers/generated-name.jpg",
+  "coverUrl": "https://res.cloudinary.com/.../cover.jpg",
+  "coverPublicId": "course-covers/abc123",
   "instructor": null,
   "categoryId": [1]
 }
 ```
 
-The backend should use the JWT-authenticated instructor as the course owner.
+The backend automatically sets the JWT-authenticated instructor as the course owner. Set `instructor` to `null`.
+
+Update my course:
+
+```http
+PUT /api/courses/instructor/me/{id}
+```
+
+Delete my course:
+
+```http
+DELETE /api/courses/instructor/me/{id}
+```
+
+### Instructor Sections
+
+List my sections (optionally filter by course):
+
+```http
+GET /api/sections/instructor/me
+GET /api/sections/instructor/me?courseId=1
+```
+
+Create my section:
+
+```http
+POST /api/sections/instructor/me
+```
+
+Body:
+
+```json
+{
+  "title": "Getting Started",
+  "duration": "1 hour",
+  "courseId": 1
+}
+```
+
+Update my section:
+
+```http
+PUT /api/sections/instructor/me/{id}
+```
+
+Delete my section:
+
+```http
+DELETE /api/sections/instructor/me/{id}
+```
+
+### Instructor Lessons
+
+List my lessons (optionally filter by section or course):
+
+```http
+GET /api/lessons/instructor/me
+GET /api/lessons/instructor/me?sectionId=1
+GET /api/lessons/instructor/me?courseId=1
+```
+
+Create my lesson:
+
+```http
+POST /api/lessons/instructor/me
+```
+
+Body:
+
+```json
+{
+  "title": "Intro Lesson",
+  "videoUrl": "https://res.cloudinary.com/.../video.mp4",
+  "videoPublicId": "lesson-videos/abc123",
+  "sectionId": 1
+}
+```
+
+Update my lesson:
+
+```http
+PUT /api/lessons/instructor/me/{id}
+```
+
+Delete my lesson:
+
+```http
+DELETE /api/lessons/instructor/me/{id}
+```
 
 ### Instructor Enrollments
 
@@ -941,7 +1623,7 @@ Delete enrollment:
 DELETE /api/enrollments/{id}
 ```
 
-The backend already checks whether the instructor can manage that course.
+The backend checks whether the instructor can manage that course.
 
 ## UI Requirements
 
@@ -955,6 +1637,8 @@ Use Bootstrap components:
 - Cards for course store
 - Payment status dropdowns in admin
 - File inputs for course cover and lesson video uploads
+- Profile photo with circular avatar display
+- Star rating display for reviews and instructors
 - Responsive layout for mobile and desktop
 
 Admin dashboard should feel like an operational tool:
@@ -963,44 +1647,71 @@ Admin dashboard should feel like an operational tool:
 - Clear forms
 - Edit and delete buttons per row
 - Refresh data button
-- Metrics overview
+- Metrics overview (total users, courses, enrollments, payments)
 - No marketing hero inside admin
 
 User course store should feel like a course-selling page:
 
 - Hero area
 - Search/filter
-- Course cards
+- Course cards with cover images from Cloudinary
 - Price and rating visible
 - Clear buy/enroll button
+
+Student profile page should feel like a settings page:
+
+- Photo upload with preview
+- Form with save button
+- Student code displayed prominently
+
+Instructor dashboard should feel professional:
+
+- Profile section with photo and bio
+- Course management with inline editing
+- Section/lesson drill-down from course view
 
 ## Suggested Build Order
 
 1. Build shared API helper in `assets/js/lms-api.js`.
 2. Build auth pages: login, register, verify OTP, forgot/reset password.
-3. Build user course catalog, payment checkout, and enrollment pages.
-4. Build instructor dashboard.
-5. Build admin sidebar dashboard.
-6. Add CRUD forms and tables for admin resources.
-7. Add file upload controls for course covers and lesson videos.
-8. Add admin payment management.
-9. Add role guards and redirects.
-10. Test each page manually with real JWT tokens.
+3. Build user course catalog, course detail, payment checkout, and enrollment pages.
+4. Build student profile page.
+5. Build quiz taking interface.
+6. Build instructor dashboard with profile, courses, sections, lessons management.
+7. Build admin sidebar dashboard.
+8. Add CRUD forms and tables for admin resources (users, courses, categories, etc.).
+9. Add file upload controls for course covers, lesson videos, and profile photos.
+10. Add admin payment management.
+11. Add admin user management (list, role update, delete).
+12. Add role guards and redirects.
+13. Test each page manually with real JWT tokens.
 
 ## Manual Test Checklist
 
-- Register a user.
+- Register a user (with `fullName` and `phoneNumber`).
 - Verify OTP.
 - Login as user.
-- Browse courses.
+- View and edit student profile.
+- Upload student profile photo.
+- Browse courses in the store.
+- View course detail with sections, lessons, and reviews.
 - Create a payment checkout.
 - Confirm payment.
 - Verify the course enrollment was created after payment.
 - View user payment history.
 - View user enrollments.
+- Take a quiz and submit answers.
+- View quiz attempt results.
+- Add a course review.
 - Cancel enrollment.
+- Change password.
 - Login as instructor.
+- View and edit instructor profile.
+- Upload instructor profile photo.
 - Create instructor course.
+- Create sections for the course.
+- Create lessons for the sections.
+- Upload lesson video.
 - View course enrollments.
 - Login as admin.
 - Upload a course cover.
@@ -1012,9 +1723,15 @@ User course store should feel like a course-selling page:
 - Create/update/delete quizzes.
 - Create/update/delete questions.
 - Create/update/delete answers.
+- List all users.
+- Update a user's role.
+- Delete a test user.
 - List payments as admin.
 - Update payment status as admin.
 - Delete a test payment as admin.
 - Create enrollment for a user.
 - Update enrollment status.
 - Delete enrollment.
+- View all reviews.
+- View instructor directory.
+- Create an admin user.

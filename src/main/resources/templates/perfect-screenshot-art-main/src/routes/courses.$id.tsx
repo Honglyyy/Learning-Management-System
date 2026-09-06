@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiAlert } from "@/components/ApiAlert";
-import { Clock, User, Star, PlayCircle, ListChecks } from "lucide-react";
+import { Clock, User, Star, PlayCircle, ListChecks, Layers } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -54,6 +54,7 @@ function CourseDetail() {
       toast.success("Review submitted");
       setReviewText("");
       qc.invalidateQueries({ queryKey: ["reviews", id] });
+      qc.invalidateQueries({ queryKey: ["course", id] });
     },
 
     onError: () => toast.error("Failed to submit review"),
@@ -62,7 +63,7 @@ function CourseDetail() {
   // COURSE
   const course = useQuery<any>({
     queryKey: ["course", id],
-    queryFn: () => api(`/api/courses/${id}`, { auth: true }),
+    queryFn: () => api(`/api/courses/${id}`, { auth: false }),
   });
 
   // ENROLLMENTS
@@ -76,7 +77,7 @@ function CourseDetail() {
   const reviews = useQuery({
     queryKey: ["reviews", id],
     enabled: !!id,
-    queryFn: () => api(`/api/courses/${id}/reviews`, { auth: true }),
+    queryFn: () => api(`/api/courses/${id}/reviews`, { auth: false }),
   });
 
   // FIXED ENROLLMENT CHECK
@@ -136,6 +137,7 @@ function CourseDetail() {
   }
 
   const c = course.data;
+  const reviewList = reviews.data ?? c?.reviews ?? [];
 
   const inst =
       typeof c.instructor === "object"
@@ -183,20 +185,27 @@ function CourseDetail() {
               </span>
               )}
 
+              {(c.sectionCount != null || c.sections?.length > 0) && (
+                  <span className="flex items-center gap-1">
+                <Layers className="h-4 w-4" />
+                    {c.sectionCount ?? c.sections?.length} {Number(c.sectionCount ?? c.sections?.length) === 1 ? "Section" : "Sections"}
+              </span>
+              )}
+
               {typeof c.rating === "number" && (
                   <span className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current text-amber-500" />
                     {c.rating.toFixed(1)}
               </span>
               )}
             </div>
 
             {/* Cover */}
-            {c.coverDir && (
+            {(c.coverUrl || c.coverDir) && (
                 <img
-                    src={mediaUrl(c.coverDir)}
-                    className="mt-6 object-cover"
-                    width={'250px'}
+                    src={mediaUrl(c.coverUrl || c.coverDir)}
+                    alt={c.title}
+                    className="mt-6 rounded-lg object-cover max-h-72 w-full shadow-sm"
                 />
             )}
 
@@ -316,7 +325,7 @@ function CourseDetail() {
                     {/* VIDEO */}
                     <div className="p-4">
                       <video
-                          src={mediaUrl(activeLesson.videoDir)}
+                          src={mediaUrl(activeLesson.videoUrl || activeLesson.videoDir)}
                           controls
                           autoPlay
                           className="w-full rounded-md"
@@ -373,17 +382,17 @@ function CourseDetail() {
                   <AccordionItem value="reviews">
 
                     <AccordionTrigger>
-                      ⭐ Reviews ({reviews.data?.length || 0})
+                      ⭐ Reviews ({reviewList.length})
                     </AccordionTrigger>
 
                     <AccordionContent>
-                      {reviews.isLoading ? (
+                      {reviews.isLoading && !c?.reviews ? (
                           <p className="text-sm text-muted-foreground">
                             Loading reviews...
                           </p>
-                      ) : (reviews.data?.length ?? 0) > 0 ? (
+                      ) : reviewList.length > 0 ? (
                           <div className="space-y-3">
-                            {reviews.data?.map((r: any) => (
+                            {reviewList.map((r: any) => (
                                 <div key={r.reviewId} className="rounded-md border p-3">
 
                                   <div className="text-sm font-medium flex items-center gap-2">

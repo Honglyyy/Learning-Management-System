@@ -1,5 +1,6 @@
 package com.ly.lmsbackend.controller;
 
+import com.ly.lmsbackend.dto.authdtos.ChangePasswordRequest;
 import com.ly.lmsbackend.dto.authdtos.RegisterRequest;
 import com.ly.lmsbackend.dto.authdtos.ResetPasswordRequest;
 import com.ly.lmsbackend.dto.authdtos.UpdateRoleRequest;
@@ -13,19 +14,18 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
-
-    public UserController(UserService userService, EmailService emailService) {
-        this.userService = userService;
-    }
 
     @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> registerUser(@Valid @RequestBody RegisterRequest request) {
@@ -33,11 +33,11 @@ public class UserController {
         Roles role = request.role();
 
         if (role == null) {
-            role = Roles.USER;
+            role = Roles.STUDENT;
         }
 
-        if (role != Roles.USER && role != Roles.INSTRUCTOR) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
+        if (role != Roles.STUDENT && role != Roles.USER && role != Roles.INSTRUCTOR) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role. Allowed roles: STUDENT, INSTRUCTOR");
         }
 
         RegisterRequest registerRequest = new RegisterRequest(
@@ -88,6 +88,16 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/api/users/change-password")
+    public ResponseEntity<String> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        userService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok("Password changed successfully");
     }
 
     @PreAuthorize("hasRole('ADMIN')")

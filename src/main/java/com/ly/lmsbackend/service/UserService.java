@@ -1,30 +1,29 @@
 package com.ly.lmsbackend.service;
 
+import com.ly.lmsbackend.dto.authdtos.ChangePasswordRequest;
 import com.ly.lmsbackend.dto.authdtos.RegisterRequest;
 import com.ly.lmsbackend.dto.authdtos.UserResponseDTO;
 import com.ly.lmsbackend.mapper.UserMapper;
+import com.ly.lmsbackend.model.Genders;
+import com.ly.lmsbackend.model.Instructors;
 import com.ly.lmsbackend.model.Roles;
+import com.ly.lmsbackend.model.Students;
 import com.ly.lmsbackend.model.Users;
-import com.ly.lmsbackend.repository.CourseRepository;
-import com.ly.lmsbackend.repository.CourseReviewRepository;
-import com.ly.lmsbackend.repository.EnrollmentRepository;
-import com.ly.lmsbackend.repository.AnswerRepository;
-import com.ly.lmsbackend.repository.LessonRepository;
-import com.ly.lmsbackend.repository.PaymentRepository;
-import com.ly.lmsbackend.repository.QuestionRepository;
-import com.ly.lmsbackend.repository.QuizAttemptRepository;
-import com.ly.lmsbackend.repository.QuizRepository;
-import com.ly.lmsbackend.repository.SectionRepository;
-import com.ly.lmsbackend.repository.UserRepository;
+import com.ly.lmsbackend.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Year;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -40,27 +39,18 @@ public class UserService {
     private final QuizRepository quizRepository;
     private final LessonRepository lessonRepository;
     private final SectionRepository sectionRepository;
+    private final StudentRepository studentRepository;
+    private final InstructorRepository instructorRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, UserMapper userMapper, EmailService emailService, QuizAttemptRepository quizAttemptRepository, PaymentRepository paymentRepository, EnrollmentRepository enrollmentRepository, CourseReviewRepository courseReviewRepository, CourseRepository courseRepository, AnswerRepository answerRepository, QuestionRepository questionRepository, QuizRepository quizRepository, LessonRepository lessonRepository, SectionRepository sectionRepository) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.userMapper = userMapper;
-        this.emailService = emailService;
-        this.quizAttemptRepository = quizAttemptRepository;
-        this.paymentRepository = paymentRepository;
-        this.enrollmentRepository = enrollmentRepository;
-        this.courseReviewRepository = courseReviewRepository;
-        this.courseRepository = courseRepository;
-        this.answerRepository = answerRepository;
-        this.questionRepository = questionRepository;
-        this.quizRepository = quizRepository;
-        this.lessonRepository = lessonRepository;
-        this.sectionRepository = sectionRepository;
-    }
-
+    @Transactional
     public UserResponseDTO register(RegisterRequest request){
         if(userRepository.findByEmail(request.email()).isPresent()){
-            throw new RuntimeException("Email already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+        }
+
+        Roles role = request.role();
+        if (role == null) {
+            role = Roles.STUDENT;
         }
 
         Users users = new Users();
@@ -70,7 +60,33 @@ public class UserService {
         users.setFullname(request.fullName());
         users.setPhoneNumber(request.phoneNumber());
         users.setUserId(UUID.randomUUID().toString());
-        users.setRole(request.role());
+        users.setRole(role);
+
+        if (role == Roles.STUDENT || role == Roles.USER) {
+            int year = Year.now().getValue();
+            long count = studentRepository.count() + 1;
+            String code;
+            do {
+                code = String.format("STU-%d-%04d", year, count++);
+            } while (studentRepository.existsByStudentCode(code));
+
+            Students student = Students.builder()
+                    .user(users)
+                    .studentCode(code)
+                    .fullName(request.fullName())
+                    .phoneNumber(request.phoneNumber())
+                    .gender(Genders.NOT_SPECIFIC)
+                    .build();
+            users.setStudent(student);
+        } else if (role == Roles.INSTRUCTOR) {
+            Instructors instructor = Instructors.builder()
+                    .user(users)
+                    .fullName(request.fullName())
+                    .phoneNumber(request.phoneNumber())
+                    .averageRating(5.0)
+                    .build();
+            users.setInstructor(instructor);
+        }
 
         Users saved = userRepository.save(users);
 
@@ -172,15 +188,57 @@ public class UserService {
                 .toList();
     }
 
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password does not match");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+    }
+
+    @Transactional
     public UserResponseDTO updateUserRole(
             Long id,
             Roles role
     ) {
         Users user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         user.setRole(role);
+
+        if ((role == Roles.STUDENT || role == Roles.USER) && user.getStudent() == null && studentRepository.findByUser_Id(id).isEmpty()) {
+            int year = Year.now().getValue();
+            long count = studentRepository.count() + 1;
+            String code;
+            do {
+                code = String.format("STU-%d-%04d", year, count++);
+            } while (studentRepository.existsByStudentCode(code));
+
+            Students student = Students.builder()
+                    .user(user)
+                    .studentCode(code)
+                    .fullName(user.getFullname() != null ? user.getFullname() : user.getUsername())
+                    .phoneNumber(user.getPhoneNumber())
+                    .gender(Genders.NOT_SPECIFIC)
+                    .build();
+            studentRepository.save(student);
+            user.setStudent(student);
+        } else if (role == Roles.INSTRUCTOR && user.getInstructor() == null && instructorRepository.findByUser_Id(id).isEmpty()) {
+            Instructors instructor = Instructors.builder()
+                    .user(user)
+                    .fullName(user.getFullname() != null ? user.getFullname() : user.getUsername())
+                    .phoneNumber(user.getPhoneNumber())
+                    .averageRating(5.0)
+                    .build();
+            instructorRepository.save(instructor);
+            user.setInstructor(instructor);
+        }
 
         userRepository.save(user);
 
@@ -191,8 +249,10 @@ public class UserService {
     public void deleteUser(Long id) {
         Users user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        studentRepository.deleteByUser_Id(id);
+        instructorRepository.deleteByUser_Id(id);
         quizAttemptRepository.deleteAllForUserRemoval(id);
         paymentRepository.deleteAllForUserRemoval(id);
         enrollmentRepository.deleteAllForUserRemoval(id);

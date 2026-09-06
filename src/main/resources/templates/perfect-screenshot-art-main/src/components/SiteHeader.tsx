@@ -22,41 +22,81 @@ export function SiteHeader() {
           <span>Lumen LMS</span>
         </Link>
         <nav className="hidden gap-6 text-sm md:flex">
-          <Link to="/" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Courses</Link>
+          <Link to="/" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Courses</Link>
+          <Link to="/instructors" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Instructors</Link>
           {isAuthenticated && (
             <>
-              <Link to="/my/enrollments" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>My learning</Link>
-              <Link to="/my/payments" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Payments</Link>
+              <Link to="/my/enrollments" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>My learning</Link>
+              <Link to="/my/payments" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Payments</Link>
             </>
           )}
           {role === "INSTRUCTOR" && (
-            <Link to="/instructor" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Instructor</Link>
+            <Link to="/instructor" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Instructor Studio</Link>
           )}
           {role === "ADMIN" && (
-            <Link to="/admin" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground" }}>Admin</Link>
+            <Link to="/admin" className="text-muted-foreground hover:text-foreground" activeProps={{ className: "text-foreground font-medium" }}>Admin</Link>
           )}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <>
+              <span className="hidden text-xs text-muted-foreground lg:inline">{email}</span>
+              <Button variant="ghost" size="sm" onClick={() => nav({ to: "/profile" })}>
+                Profile
+              </Button>
+              {role && role !== "USER" && role !== "STUDENT" && (
+                <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => nav({ to: roleHome(role) })}>
+                  Dashboard
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => { logout(); nav({ to: "/login" }); }}>
+                Sign out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>
+                Sign in
+              </Button>
+              <Button size="sm" onClick={() => nav({ to: "/register" })}>
+                Get started
+              </Button>
+            </>
+          )}
+
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="API settings"><Settings className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" aria-label="API settings">
+                <Settings className="h-4 w-4" />
+              </Button>
             </DialogTrigger>
             <DialogContent>
-              {isAuthenticated ? (
-                  <>
-                    <span className="hidden text-xs text-muted-foreground sm:inline">{email}</span>
-                    <Button variant="outline" size="sm" onClick={() => { logout(); nav({ to: "/login" }); }}>Sign out</Button>
-                  </>
-              ) : (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>Sign in</Button>
-                    <Button size="sm" onClick={() => nav({ to: "/register" })}>Get started</Button>
-                  </>
-              )}
-              {isAuthenticated && role && (
-                  <Button variant="ghost" size="sm" className="hidden md:inline-flex" onClick={() => nav({ to: roleHome(role) })}>Dashboard</Button>
-              )}
+              <DialogHeader>
+                <DialogTitle>Backend API Connection</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <Label htmlFor="apiBaseUrl">Backend Server URL</Label>
+                <Input
+                  id="apiBaseUrl"
+                  value={apiBase}
+                  onChange={(e) => setBase(e.target.value)}
+                  placeholder="http://localhost:8080"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Default: <code>http://localhost:8080</code>
+                </p>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setApiBase(apiBase);
+                    setOpen(false);
+                  }}
+                >
+                  Save URL
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>

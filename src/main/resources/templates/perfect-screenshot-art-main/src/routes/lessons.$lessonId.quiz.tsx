@@ -153,9 +153,16 @@ function LessonQuizPage() {
               questions.map((question, index) => (
                 <Card key={question.questionId}>
                   <CardHeader>
-                    <CardTitle className="text-base">
-                      {index + 1}. {question.questionText}
-                    </CardTitle>
+                    <div className="flex items-start justify-between gap-4">
+                      <CardTitle className="text-base">
+                        {index + 1}. {question.questionText}
+                      </CardTitle>
+                      {question.point != null && (
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {question.point} {question.point === 1 ? "pt" : "pts"}
+                        </Badge>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <RadioGroup
@@ -201,12 +208,19 @@ function LessonQuizPage() {
                 <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-muted-foreground">
                     {attempt ? (
-                      <span className="flex items-center gap-2 font-medium text-foreground">
-                        <Trophy className="h-4 w-4 text-primary" />
-                        Saved points: {formatPoints(attempt.earnedPoints)} /{" "}
-                        {formatPoints(attempt.totalPoints)} ({attempt.correctAnswers} /{" "}
-                        {attempt.totalQuestions} correct)
-                      </span>
+                      <div className="space-y-1">
+                        <span className="flex items-center gap-2 font-medium text-foreground">
+                          <Trophy className="h-4 w-4 text-primary" />
+                          Saved points: {formatPoints(attempt.earnedPoints)} /{" "}
+                          {formatPoints(attempt.totalPoints)} ({attempt.correctAnswers} /{" "}
+                          {attempt.totalQuestions} correct)
+                        </span>
+                        {attempt.submittedAt && (
+                          <span className="text-xs text-muted-foreground block">
+                            Submitted on {new Date(attempt.submittedAt).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     ) : submitted ? (
                       <span className="flex items-center gap-2 font-medium text-foreground">
                         <Trophy className="h-4 w-4 text-primary" />

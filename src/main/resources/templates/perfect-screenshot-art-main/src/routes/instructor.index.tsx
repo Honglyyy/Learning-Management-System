@@ -85,6 +85,9 @@ import {
     Star,
     BookOpen,
     Mail,
+    Paperclip,
+    FileText,
+    Download,
 } from "lucide-react";
 
 export const Route = createFileRoute("/instructor/")({
@@ -1022,6 +1025,11 @@ function LessonRow({
                 <div className="flex items-center gap-2 text-sm">
                     <FileVideo className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="line-clamp-1">{lesson.title}</span>
+                    {lesson.isFree && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-300">
+                            Free Trial
+                        </Badge>
+                    )}
                 </div>
 
                 <div className="flex shrink-0 gap-1">
@@ -1037,6 +1045,8 @@ function LessonRow({
                             <Play className="h-3.5 w-3.5" />
                         </Button>
                     )}
+
+                    <ManageMaterialsDialog lesson={lesson} />
 
                     <EditLessonDialog
                         lesson={lesson}
@@ -1505,7 +1515,17 @@ function CreateLessonDialog({
     onSaved: () => void;
 }) {
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ title: "", videoUrl: "", videoPublicId: "", videoDir: "" });
+    const [form, setForm] = useState({
+        title: "",
+        videoUrl: "",
+        videoPublicId: "",
+        videoDir: "",
+        orderIndex: 0,
+        duration: "",
+        description: "",
+        textContent: "",
+        isFree: false,
+    });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
 
@@ -1541,7 +1561,17 @@ function CreateLessonDialog({
         onSuccess: () => {
             toast.success("Lesson created");
             setOpen(false);
-            setForm({ title: "", videoUrl: "", videoPublicId: "", videoDir: "" });
+            setForm({
+                title: "",
+                videoUrl: "",
+                videoPublicId: "",
+                videoDir: "",
+                orderIndex: 0,
+                duration: "",
+                description: "",
+                textContent: "",
+                isFree: false,
+            });
             onSaved();
         },
         onError: (e) => setError(e),
@@ -1591,6 +1621,11 @@ function EditLessonDialog({
         videoUrl: lesson.videoUrl ?? lesson.videoDir ?? "",
         videoPublicId: lesson.videoPublicId ?? "",
         videoDir: lesson.videoUrl ?? lesson.videoDir ?? "",
+        orderIndex: lesson.orderIndex ?? 0,
+        duration: lesson.duration ?? "",
+        description: lesson.description ?? "",
+        textContent: lesson.textContent ?? "",
+        isFree: lesson.isFree ?? false,
     });
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<any>(null);
@@ -1662,14 +1697,33 @@ function EditLessonDialog({
 
 function LessonFormFields({ form, setForm, uploading, onUpload, error }: any) {
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
             <ApiAlert error={error} />
             <div className="space-y-1">
                 <Label>Title</Label>
                 <Input
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Lesson title"
                 />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                    <Label>Order Index</Label>
+                    <Input
+                        type="number"
+                        value={form.orderIndex ?? 0}
+                        onChange={(e) => setForm({ ...form, orderIndex: parseInt(e.target.value) || 0 })}
+                    />
+                </div>
+                <div className="space-y-1">
+                    <Label>Duration</Label>
+                    <Input
+                        value={form.duration ?? ""}
+                        onChange={(e) => setForm({ ...form, duration: e.target.value })}
+                        placeholder="e.g. 15:30"
+                    />
+                </div>
             </div>
             <div className="space-y-1">
                 <Label>Video</Label>
@@ -1689,7 +1743,244 @@ function LessonFormFields({ form, setForm, uploading, onUpload, error }: any) {
                     </p>
                 )}
             </div>
+            <div className="space-y-1">
+                <Label>Description</Label>
+                <Textarea
+                    rows={2}
+                    value={form.description ?? ""}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Brief description of this lesson"
+                />
+            </div>
+            <div className="space-y-1">
+                <Label>Reading Text / Notes</Label>
+                <Textarea
+                    rows={3}
+                    value={form.textContent ?? ""}
+                    onChange={(e) => setForm({ ...form, textContent: e.target.value })}
+                    placeholder="Supplemental text, instructions, or notes"
+                />
+            </div>
+            <div className="flex items-start space-x-2 rounded-md border p-3 bg-muted/20">
+                <Checkbox
+                    id="instructorLessonIsFree"
+                    checked={Boolean(form.isFree)}
+                    onCheckedChange={(checked) =>
+                        setForm({ ...form, isFree: checked === true })
+                    }
+                />
+                <div className="grid gap-1 leading-none">
+                    <Label htmlFor="instructorLessonIsFree" className="font-medium cursor-pointer">
+                        Free Trial / Preview Lesson
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                        Allow prospective students to watch this video without enrolling in the course.
+                    </p>
+                </div>
+            </div>
         </div>
+    );
+}
+
+function ManageMaterialsDialog({ lesson }: { lesson: any }) {
+    const [open, setOpen] = useState(false);
+    const [title, setTitle] = useState("");
+    const [fileType, setFileType] = useState("PDF");
+    const [fileUrl, setFileUrl] = useState("");
+    const [filePublicId, setFilePublicId] = useState("");
+    const [fileSize, setFileSize] = useState<number | undefined>(undefined);
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState<any>(null);
+
+    const qc = useQueryClient();
+
+    const materialsQuery = useQuery<any[]>({
+        queryKey: ["instructor-materials", lesson.lessonId],
+        queryFn: () => api(`/api/lessons/${lesson.lessonId}/materials`, { auth: true }),
+        enabled: open,
+    });
+
+    async function handleUploadMaterial(file: File) {
+        setUploading(true);
+        setError(null);
+        try {
+            const fd = new FormData();
+            fd.append("file", file);
+            const res = await api<any>("/api/uploads/material", {
+                method: "POST",
+                formData: fd,
+            });
+            setFileUrl(res.url);
+            setFilePublicId(res.publicId);
+            setFileSize(res.size);
+            if (!title) {
+                setTitle(file.name.replace(/\.[^/.]+$/, ""));
+            }
+            const ext = file.name.split(".").pop()?.toUpperCase() || "DOC";
+            setFileType(ext === "PDF" ? "PDF" : ext.startsWith("PPT") ? "SLIDE" : "DOC");
+            toast.success("File uploaded to Cloudinary");
+        } catch (e) {
+            setError(e);
+            toast.error("Failed to upload file");
+        } finally {
+            setUploading(false);
+        }
+    }
+
+    const attachMutation = useMutation({
+        mutationFn: () =>
+            api(`/api/lessons/${lesson.lessonId}/materials`, {
+                method: "POST",
+                body: {
+                    title,
+                    fileUrl,
+                    filePublicId,
+                    fileType,
+                    fileSize,
+                },
+            }),
+        onSuccess: () => {
+            toast.success("Material attached");
+            setTitle("");
+            setFileUrl("");
+            setFilePublicId("");
+            setFileSize(undefined);
+            qc.invalidateQueries({ queryKey: ["instructor-materials", lesson.lessonId] });
+        },
+        onError: (e) => {
+            setError(e);
+            toast.error("Failed to attach material");
+        },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (materialId: number) =>
+            api(`/api/materials/${materialId}`, {
+                method: "DELETE",
+            }),
+        onSuccess: () => {
+            toast.success("Material deleted");
+            qc.invalidateQueries({ queryKey: ["instructor-materials", lesson.lessonId] });
+        },
+        onError: () => toast.error("Failed to delete material"),
+    });
+
+    const materials = materialsQuery.data || [];
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Manage materials">
+                    <Paperclip className="h-3.5 w-3.5" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>Materials for: {lesson.title}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <ApiAlert error={error} />
+
+                    {/* Existing materials list */}
+                    <div className="space-y-2">
+                        <Label className="text-sm font-semibold">Current Attachments ({materials.length})</Label>
+                        {materialsQuery.isLoading ? (
+                            <Skeleton className="h-16 w-full" />
+                        ) : materials.length > 0 ? (
+                            <div className="divide-y rounded-md border max-h-48 overflow-y-auto">
+                                {materials.map((m: any) => (
+                                    <div key={m.materialId} className="flex items-center justify-between p-2.5 hover:bg-muted/40 text-sm">
+                                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                                            <FileText className="h-4 w-4 shrink-0 text-primary" />
+                                            <div className="min-w-0">
+                                                <p className="font-medium line-clamp-1">{m.title}</p>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <Badge variant="secondary" className="text-[10px] px-1 py-0">{m.fileType || "DOC"}</Badge>
+                                                    {m.fileSize && <span>{(m.fileSize / 1024).toFixed(0)} KB</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
+                                                <a href={mediaUrl(m.fileUrl)} target="_blank" rel="noreferrer" download>
+                                                    <Download className="h-3.5 w-3.5" />
+                                                </a>
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-7 w-7 text-destructive"
+                                                onClick={() => {
+                                                    if (confirm("Delete this material?")) {
+                                                        deleteMutation.mutate(m.materialId);
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted-foreground">No materials attached yet.</p>
+                        )}
+                    </div>
+
+                    {/* Attach new material form */}
+                    <div className="rounded-lg border p-4 bg-muted/20 space-y-3">
+                        <h4 className="text-sm font-semibold">Attach New Material</h4>
+                        <div className="space-y-1">
+                            <Label>Title</Label>
+                            <Input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="e.g. Chapter Slides or Assignment Brief"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                                <Label>Type</Label>
+                                <Select value={fileType} onValueChange={setFileType}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PDF">PDF Document</SelectItem>
+                                        <SelectItem value="SLIDE">Presentation (Slide)</SelectItem>
+                                        <SelectItem value="DOC">Word / Text Document</SelectItem>
+                                        <SelectItem value="LINK">External Link</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label>Upload File</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="file"
+                                        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                                        onChange={(e) => e.target.files?.[0] && handleUploadMaterial(e.target.files[0])}
+                                    />
+                                    {uploading && <Upload className="h-4 w-4 animate-pulse shrink-0" />}
+                                </div>
+                            </div>
+                        </div>
+
+                        {fileUrl && (
+                            <p className="text-xs text-muted-foreground truncate">Uploaded: {fileUrl}</p>
+                        )}
+
+                        <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={attachMutation.isPending || !title || !fileUrl}
+                            onClick={() => attachMutation.mutate()}
+                        >
+                            <Plus className="mr-1 h-3.5 w-3.5" /> Attach Material
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 

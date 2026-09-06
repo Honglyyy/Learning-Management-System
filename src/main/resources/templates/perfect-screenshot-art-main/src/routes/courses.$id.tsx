@@ -12,8 +12,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiAlert } from "@/components/ApiAlert";
-import { Clock, User, Star, PlayCircle, ListChecks, Layers } from "lucide-react";
-import { useState } from "react";
+import {
+  Clock,
+  User,
+  Star,
+  Play,
+  PlayCircle,
+  ListChecks,
+  Layers,
+  CheckCircle,
+  Lock,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Download,
+  Check,
+  Paperclip,
+} from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Accordion,
@@ -63,7 +79,7 @@ function CourseDetail() {
   // COURSE
   const course = useQuery<any>({
     queryKey: ["course", id],
-    queryFn: () => api(`/api/courses/${id}`, { auth: false }),
+    queryFn: () => api(`/api/courses/${id}`),
   });
 
   // ENROLLMENTS
@@ -80,13 +96,34 @@ function CourseDetail() {
     queryFn: () => api(`/api/courses/${id}/reviews`, { auth: false }),
   });
 
-  // FIXED ENROLLMENT CHECK
   const isEnrolled =
       enrollments.data?.some(
           (e: any) =>
               String(e.course?.courseId ?? e.courseId) === String(id) &&
               e.status === "ACTIVE"
       ) || false;
+
+  const lessonsStatusQuery = useQuery<any[]>({
+    queryKey: ["lessons-status", id],
+    queryFn: () => api(`/api/courses/${id}/lessons-status`, { auth: true }).catch(() => []),
+    enabled: isAuthenticated && isEnrolled,
+  });
+
+  const getLessonStatus = (lesson: any) => {
+    if (lesson?.isFree) return "INCOMPLETE";
+    if (!isEnrolled) return "LOCKED";
+    const found = lessonsStatusQuery.data?.find((s: any) => s.lessonId === lesson?.lessonId);
+    return found?.status || "INCOMPLETE";
+  };
+
+  const findLessonById = (lessonId: number) => {
+    for (const sec of course.data?.sections || []) {
+      for (const les of sec.lessons || []) {
+        if (les.lessonId === lessonId) return les;
+      }
+    }
+    return { lessonId, title: `Lesson ${lessonId}` };
+  };
 
   // ENROLL (payment flow kept same)
   const buy = useMutation({
@@ -121,16 +158,33 @@ function CourseDetail() {
   }
 
   if (course.error || !course.data) {
+    const isAuthError = (course.error as any)?.status === 401;
     return (
         <div className="min-h-screen bg-background">
           <SiteHeader />
-          <div className="container mx-auto px-4 py-10">
-            {/*<ApiAlert error={course.error || "Course not found"} />*/}
-            <h1 className={"text-center text-xl"}>Please log in to continue</h1>
-            <div className={"flex gap-4 justify-center mt-3"}>
-              <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>Sign in</Button>
-              <Button size="sm" onClick={() => nav({ to: "/register" })}>Get started</Button>
-            </div>
+          <div className="container mx-auto px-4 py-10 max-w-lg text-center">
+            {isAuthError && !isAuthenticated ? (
+              <>
+                <h1 className="text-xl font-semibold mb-2">Please log in to continue</h1>
+                <p className="text-sm text-muted-foreground mb-4">You need to sign in to access this page.</p>
+                <div className="flex gap-4 justify-center">
+                  <Button variant="ghost" size="sm" onClick={() => nav({ to: "/login" })}>Sign in</Button>
+                  <Button size="sm" onClick={() => nav({ to: "/register" })}>Get started</Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <ApiAlert error={course.error || "Course not found"} />
+                <div className="mt-4 flex justify-center gap-3">
+                  <Button variant="outline" size="sm" onClick={() => nav({ to: "/" })}>
+                    Back to courses
+                  </Button>
+                  <Button size="sm" onClick={() => course.refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
     );
@@ -244,30 +298,67 @@ function CourseDetail() {
                         <AccordionContent className="px-4 pb-4">
                           <div className="divide-y">
 
-                            {section.lessons?.map((lesson: any) => (
+                            {section.lessons?.map((lesson: any) => {
+                              const status = getLessonStatus(lesson);
+                              const isFree = Boolean(lesson.isFree);
+                              const isLocked = isEnrolled ? status === "LOCKED" : !isFree;
+                              const isCompleted = isEnrolled && status === "COMPLETED";
+
+                              return (
                                 <div
                                     key={lesson.lessonId}
                                     className="flex items-center justify-between py-3"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <PlayCircle className="h-4 w-4 text-primary" />
-                                    <span className="text-sm">
-                    {lesson.title}
-                  </span>
+                                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                    {isCompleted ? (
+                                      <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />
+                                    ) : isLocked ? (
+                                      <Lock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    ) : (
+                                      <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
+                                    )}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className={`text-sm font-medium line-clamp-1 ${isLocked ? "text-muted-foreground" : ""}`}>
+                                        {lesson.title}
+                                      </span>
+                                      {lesson.duration && (
+                                        <span className="text-xs text-muted-foreground shrink-0">
+                                          ({lesson.duration})
+                                        </span>
+                                      )}
+                                      {isFree && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-300 shrink-0 font-medium">
+                                          Free Trial
+                                        </Badge>
+                                      )}
+                                      {isCompleted && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-300 shrink-0">
+                                          Completed
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {isEnrolled ? (
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                            size="sm"
-                                            onClick={() => setActiveLesson(lesson)}
-                                        >
-                                          Play
-                                        </Button>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        {isLocked ? (
+                                          <Button size="sm" variant="outline" disabled className="gap-1 opacity-60">
+                                            <Lock className="h-3.5 w-3.5" /> Locked
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                              size="sm"
+                                              variant={isCompleted ? "outline" : "default"}
+                                              onClick={() => setActiveLesson(lesson)}
+                                          >
+                                            {isCompleted ? "Review" : "Play"}
+                                          </Button>
+                                        )}
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             className="gap-1"
+                                            disabled={isLocked}
                                             onClick={() =>
                                                 nav({
                                                   to: "/lessons/$lessonId/quiz",
@@ -279,13 +370,26 @@ function CourseDetail() {
                                           Quiz
                                         </Button>
                                       </div>
+                                  ) : isFree ? (
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 font-medium"
+                                          onClick={() => setActiveLesson(lesson)}
+                                        >
+                                          <Play className="h-3.5 w-3.5 fill-white" />
+                                          Free Preview
+                                        </Button>
+                                      </div>
                                   ) : (
                                       <Button size="sm" disabled>
                                         Enroll to watch
                                       </Button>
                                   )}
                                 </div>
-                            ))}
+                              );
+                            })}
 
                           </div>
                         </AccordionContent>
@@ -300,40 +404,18 @@ function CourseDetail() {
                 </p>
             )}
 
-            {/* ================= VIDEO PLAYER ================= */}
+            {/* ================= LESSON PLAYER MODAL ================= */}
             {activeLesson && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-
-                  {/* MODAL BOX */}
-                  <div className="relative w-full max-w-4xl rounded-lg bg-background shadow-xl">
-
-                    {/* CLOSE BUTTON */}
-                    <button
-                        onClick={() => setActiveLesson(null)}
-                        className="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-3 py-1 text-white hover:bg-black"
-                    >
-                      ✕
-                    </button>
-
-                    {/* TITLE */}
-                    <div className="border-b p-4">
-                      <h3 className="font-semibold">
-                        {activeLesson.title}
-                      </h3>
-                    </div>
-
-                    {/* VIDEO */}
-                    <div className="p-4">
-                      <video
-                          src={mediaUrl(activeLesson.videoUrl || activeLesson.videoDir)}
-                          controls
-                          autoPlay
-                          className="w-full rounded-md"
-                      />
-                    </div>
-
-                  </div>
-                </div>
+              <LessonPlayerModal
+                courseId={id}
+                lesson={activeLesson}
+                isEnrolled={isEnrolled}
+                onClose={() => setActiveLesson(null)}
+                onSelectLesson={(targetId) => {
+                  const target = findLessonById(targetId);
+                  setActiveLesson(target);
+                }}
+              />
             )}
           </div>
 
@@ -462,5 +544,273 @@ function CourseDetail() {
           </aside>
         </div>
       </div>
+  );
+}
+
+function LessonPlayerModal({
+  courseId,
+  lesson,
+  isEnrolled,
+  onClose,
+  onSelectLesson,
+}: {
+  courseId: string;
+  lesson: any;
+  isEnrolled: boolean;
+  onClose: () => void;
+  onSelectLesson: (lessonId: number) => void;
+}) {
+  const qc = useQueryClient();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [lastSavedSecond, setLastSavedSecond] = useState<number>(0);
+
+  const progressQuery = useQuery<any>({
+    queryKey: ["lesson-progress", lesson.lessonId],
+    queryFn: () => api(`/api/lessons/${lesson.lessonId}/progress`, { auth: true }).catch(() => null),
+    enabled: isEnrolled,
+  });
+
+  const navigationQuery = useQuery<any>({
+    queryKey: ["lesson-navigation", lesson.lessonId],
+    queryFn: () => api(`/api/lessons/${lesson.lessonId}/navigation`, { auth: false }).catch(() => null),
+  });
+
+  const materialsQuery = useQuery<any[]>({
+    queryKey: ["lesson-materials", lesson.lessonId],
+    queryFn: () => api(`/api/lessons/${lesson.lessonId}/materials`, { auth: false }).catch(() => []),
+  });
+
+  const hasResumedRef = useRef(false);
+  useEffect(() => {
+    hasResumedRef.current = false;
+  }, [lesson.lessonId]);
+
+  const handleLoadedMetadata = () => {
+    if (hasResumedRef.current) return;
+    const resumeSeconds = progressQuery.data?.lastPlaybackPositionSeconds;
+    if (videoRef.current && resumeSeconds && resumeSeconds > 1) {
+      videoRef.current.currentTime = resumeSeconds;
+      hasResumedRef.current = true;
+    }
+  };
+
+  useEffect(() => {
+    if (!hasResumedRef.current && videoRef.current && progressQuery.data?.lastPlaybackPositionSeconds > 1) {
+      videoRef.current.currentTime = progressQuery.data.lastPlaybackPositionSeconds;
+      hasResumedRef.current = true;
+    }
+  }, [progressQuery.data]);
+
+  const savePlayback = async (seconds: number) => {
+    if (!isEnrolled || seconds < 0) return;
+    try {
+      await api(`/api/lessons/${lesson.lessonId}/progress?seconds=${seconds.toFixed(1)}`, {
+        method: "POST",
+        auth: true,
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return;
+    const cur = Math.floor(videoRef.current.currentTime);
+    if (Math.abs(cur - lastSavedSecond) >= 5) {
+      setLastSavedSecond(cur);
+      savePlayback(videoRef.current.currentTime);
+    }
+  };
+
+  const handlePause = () => {
+    if (videoRef.current) {
+      savePlayback(videoRef.current.currentTime);
+    }
+  };
+
+  const completeMutation = useMutation({
+    mutationFn: () => api(`/api/lessons/${lesson.lessonId}/complete`, { method: "POST", auth: true }),
+    onSuccess: () => {
+      toast.success("Lesson marked as complete!");
+      qc.invalidateQueries({ queryKey: ["lessons-status", courseId] });
+      qc.invalidateQueries({ queryKey: ["lesson-progress", lesson.lessonId] });
+      qc.invalidateQueries({ queryKey: ["course", courseId] });
+    },
+    onError: () => toast.error("Failed to mark lesson complete"),
+  });
+
+  const isCompleted = progressQuery.data?.isCompleted;
+
+  const handleClose = () => {
+    if (videoRef.current) {
+      savePlayback(videoRef.current.currentTime);
+    }
+    onClose();
+  };
+
+  const handleNav = (targetLessonId: number) => {
+    if (videoRef.current) {
+      savePlayback(videoRef.current.currentTime);
+    }
+    onSelectLesson(targetLessonId);
+  };
+
+  const navData = navigationQuery.data;
+  const materials = materialsQuery.data || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 overflow-y-auto">
+      <div className="relative w-full max-w-4xl rounded-lg bg-background shadow-2xl overflow-hidden my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <div className="flex items-center gap-3">
+            <h3 className="font-semibold text-lg line-clamp-1">{lesson.title}</h3>
+            {lesson.isFree && (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 gap-1 text-xs font-medium">
+                Free Trial
+              </Badge>
+            )}
+            {isCompleted && (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 gap-1 text-xs">
+                <Check className="h-3 w-3" /> Completed
+              </Badge>
+            )}
+          </div>
+          <button
+            onClick={handleClose}
+            className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Free preview guest banner */}
+        {!isEnrolled && (
+          <div className="bg-emerald-600/10 border-b border-emerald-500/20 px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-900 dark:text-emerald-300">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold">Free Preview:</span>
+              <span>You are previewing this lesson without enrolling.</span>
+            </div>
+            <span className="text-muted-foreground">Enroll in the full course to unlock all lessons, quizzes, and track progress.</span>
+          </div>
+        )}
+
+        {/* Video Player */}
+        <div className="bg-black">
+          {lesson.videoUrl || lesson.videoDir ? (
+            <video
+              ref={videoRef}
+              src={mediaUrl(lesson.videoUrl || lesson.videoDir)}
+              controls
+              autoPlay
+              onLoadedMetadata={handleLoadedMetadata}
+              onTimeUpdate={handleTimeUpdate}
+              onPause={handlePause}
+              className="w-full aspect-video max-h-[500px]"
+            />
+          ) : (
+            <div className="flex h-64 items-center justify-center text-muted-foreground">
+              No video available for this lesson
+            </div>
+          )}
+        </div>
+
+        {/* Lesson Controls Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/30 px-6 py-3">
+          {/* Navigation Controls */}
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!navData?.hasPrevious}
+              onClick={() => navData?.previousLessonId && handleNav(navData.previousLessonId)}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" /> Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!navData?.hasNext}
+              onClick={() => navData?.nextLessonId && handleNav(navData.nextLessonId)}
+              className="gap-1"
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Complete / Status button */}
+          {isEnrolled ? (
+            <Button
+              size="sm"
+              variant={isCompleted ? "secondary" : "default"}
+              disabled={completeMutation.isPending || isCompleted}
+              onClick={() => completeMutation.mutate()}
+              className="gap-1.5"
+            >
+              <CheckCircle className="h-4 w-4" />
+              {isCompleted ? "Completed" : completeMutation.isPending ? "Marking..." : "Mark as Complete"}
+            </Button>
+          ) : (
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-3 py-1.5 text-xs font-medium">
+              Free Trial Video
+            </Badge>
+          )}
+        </div>
+
+        {/* Lesson Details & Materials Content */}
+        <div className="p-6 space-y-6 max-h-72 overflow-y-auto">
+          {/* Description & Text Content */}
+          {(lesson.description || lesson.textContent) && (
+            <div className="space-y-3">
+              {lesson.description && (
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">About this lesson</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{lesson.description}</p>
+                </div>
+              )}
+              {lesson.textContent && (
+                <div className="rounded-md border bg-muted/20 p-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-1">Notes & Instructions</h4>
+                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">{lesson.textContent}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Learning Materials */}
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <Paperclip className="h-4 w-4 text-primary" /> Learning Materials ({materials.length})
+            </h4>
+            {materials.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {materials.map((mat: any) => (
+                  <div key={mat.materialId} className="flex items-center justify-between rounded-lg border p-3 bg-card hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <FileText className="h-5 w-5 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium line-clamp-1">{mat.title}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{mat.fileType || "DOC"}</Badge>
+                          {mat.fileSize && <span>{(mat.fileSize / 1024).toFixed(0)} KB</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" asChild className="shrink-0">
+                      <a href={mediaUrl(mat.fileUrl)} target="_blank" rel="noreferrer" download={mat.title}>
+                        <Download className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No supplemental materials attached to this lesson.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

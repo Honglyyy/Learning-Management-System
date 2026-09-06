@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -289,7 +290,18 @@ function AdminLessons() {
             <TableBody>
               {list.data?.map((l: any) => (
                 <TableRow key={l.lessonId}>
-                  <TableCell>{l.lessonId}</TableCell><TableCell>{l.title}</TableCell><TableCell>{l.sectionName || `Section #${l.sectionId}`}</TableCell>
+                  <TableCell>{l.lessonId}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{l.title}</span>
+                      {l.isFree && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-300 shrink-0">
+                          Free Trial
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{l.sectionName || `Section #${l.sectionId}`}</TableCell>
                   <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
                     {(l.videoUrl || l.videoDir) && <video src={mediaUrl(l.videoUrl || l.videoDir)} width={"100px"} controls/>}
                   </TableCell>
@@ -314,7 +326,8 @@ function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "e
     videoUrl: initial.videoUrl ?? initial.videoDir ?? "",
     videoPublicId: initial.videoPublicId ?? "",
     videoDir: initial.videoUrl ?? initial.videoDir ?? "",
-  } : { title: "", videoUrl: "", videoPublicId: "", videoDir: "", sectionId: "" });
+    isFree: initial.isFree ?? false,
+  } : { title: "", videoUrl: "", videoPublicId: "", videoDir: "", sectionId: "", isFree: false });
   const [error, setError] = useState<unknown>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -344,23 +357,73 @@ function LessonDialog({ mode, sections,initial, onSaved }: { mode: "create" | "e
       videoUrl: initial.videoUrl ?? initial.videoDir ?? "",
       videoPublicId: initial.videoPublicId ?? "",
       videoDir: initial.videoUrl ?? initial.videoDir ?? "",
-    } : { title: "", videoUrl: "", videoPublicId: "", videoDir: "", sectionId: "" }); setError(null); } }}>
+      orderIndex: initial.orderIndex ?? 0,
+      duration: initial.duration ?? "",
+      description: initial.description ?? "",
+      textContent: initial.textContent ?? "",
+      isFree: initial.isFree ?? false,
+    } : {
+      title: "",
+      videoUrl: "",
+      videoPublicId: "",
+      videoDir: "",
+      sectionId: "",
+      orderIndex: 0,
+      duration: "",
+      description: "",
+      textContent: "",
+      isFree: false,
+    }); setError(null); } }}>
       <DialogTrigger asChild>{mode === "create" ? <Button size="sm"><Plus className="mr-1 h-4 w-4" />New lesson</Button> : <Button size="icon" variant="ghost"><FileVideo className="h-4 w-4" /></Button>}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle>{mode === "create" ? "New lesson" : "Edit lesson"}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[70vh] overflow-y-auto px-1">
           <ApiAlert error={error} />
           <div className="space-y-1"><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          {/*<div className="space-y-1"><Label>Section ID</Label><Input type="number" value={form.sectionId} onChange={(e) => setForm({ ...form, sectionId: e.target.value })} /></div>*/}
-          <div className="space-y-1"><Label>Course</Label>
+          <div className="space-y-1"><Label>Section</Label>
             <Select value={String(form.sectionId)} onValueChange={(v) => setForm({ ...form, sectionId: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{sections.map((s) => <SelectItem key={s.sectionId} value={String(s.sectionId)}>{s.title}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Order Index</Label>
+              <Input type="number" value={form.orderIndex ?? 0} onChange={(e) => setForm({ ...form, orderIndex: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Duration</Label>
+              <Input placeholder="e.g. 15:30" value={form.duration ?? ""} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+            </div>
+          </div>
           <div className="space-y-1"><Label>Video</Label>
             <div className="flex items-center gap-2"><Input type="file" accept="video/*" onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />{uploading && <Upload className="h-4 w-4 animate-pulse" />}</div>
             {(form.videoUrl || form.videoDir) && <p className="text-xs text-muted-foreground truncate">{form.videoUrl || form.videoDir}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label>Description</Label>
+            <Textarea rows={2} placeholder="Brief description of this lesson" value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label>Reading Text / Notes</Label>
+            <Textarea rows={3} placeholder="Supplemental text or instructions" value={form.textContent ?? ""} onChange={(e) => setForm({ ...form, textContent: e.target.value })} />
+          </div>
+          <div className="flex items-start space-x-2 rounded-md border p-3 bg-muted/20">
+            <Checkbox
+              id="adminLessonIsFree"
+              checked={Boolean(form.isFree)}
+              onCheckedChange={(checked) =>
+                setForm({ ...form, isFree: checked === true })
+              }
+            />
+            <div className="grid gap-1 leading-none">
+              <Label htmlFor="adminLessonIsFree" className="font-medium cursor-pointer">
+                Free Trial / Preview Lesson
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Allow prospective students to watch this video without enrolling in the course.
+              </p>
+            </div>
           </div>
         </div>
         <DialogFooter><Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button></DialogFooter>

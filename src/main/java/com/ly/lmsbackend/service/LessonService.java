@@ -65,6 +65,11 @@ public class LessonService {
         existingLesson.setTitle(dto.title());
         existingLesson.setVideoUrl(dto.videoUrl());
         existingLesson.setVideoPublicId(dto.videoPublicId());
+        if (dto.description() != null) existingLesson.setDescription(dto.description());
+        if (dto.textContent() != null) existingLesson.setTextContent(dto.textContent());
+        if (dto.orderIndex() != null) existingLesson.setOrderIndex(dto.orderIndex());
+        if (dto.duration() != null) existingLesson.setDuration(dto.duration());
+        if (dto.isFree() != null) existingLesson.setIsFree(dto.isFree());
         existingLesson.setSection(sectionId);
 
         return lessonMapper.toDto(lessonRepository.save(existingLesson));
@@ -232,6 +237,11 @@ public class LessonService {
         lesson.setTitle(dto.title());
         lesson.setVideoUrl(dto.videoUrl());
         lesson.setVideoPublicId(dto.videoPublicId());
+        if (dto.description() != null) lesson.setDescription(dto.description());
+        if (dto.textContent() != null) lesson.setTextContent(dto.textContent());
+        if (dto.orderIndex() != null) lesson.setOrderIndex(dto.orderIndex());
+        if (dto.duration() != null) lesson.setDuration(dto.duration());
+        if (dto.isFree() != null) lesson.setIsFree(dto.isFree());
 
         Lessons updated = lessonRepository.save(lesson);
 

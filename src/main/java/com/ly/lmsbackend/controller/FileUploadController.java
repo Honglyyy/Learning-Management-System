@@ -30,4 +30,10 @@ public class FileUploadController {
     public ResponseEntity<FileUploadResponseDTO> uploadLessonVideo(@RequestParam("file") MultipartFile file) {
         return new ResponseEntity<>(fileUploadService.uploadLessonVideo(file), HttpStatus.CREATED);
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PostMapping(value = "/api/uploads/material", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileUploadResponseDTO> uploadMaterial(@RequestParam("file") MultipartFile file) {
+        return new ResponseEntity<>(fileUploadService.uploadMaterial(file), HttpStatus.CREATED);
+    }
 }

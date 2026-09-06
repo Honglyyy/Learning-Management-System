@@ -31,19 +31,40 @@ public class FileUploadService {
             "video/x-msvideo"
     );
     private static final Set<String> VIDEO_EXTENSIONS = Set.of("mp4", "webm", "mov", "avi");
+    private static final Set<String> MATERIAL_CONTENT_TYPES = Set.of(
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/plain",
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/octet-stream"
+    );
+    private static final Set<String> MATERIAL_EXTENSIONS = Set.of("pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "zip");
 
     private final Cloudinary cloudinary;
     private final long maxImageSize;
     private final long maxVideoSize;
+    private final long maxMaterialSize;
 
     public FileUploadService(
             Cloudinary cloudinary,
             @Value("${lms.upload.max-image-size:5242880}") long maxImageSize,
-            @Value("${lms.upload.max-video-size:524288000}") long maxVideoSize
+            @Value("${lms.upload.max-video-size:524288000}") long maxVideoSize,
+            @Value("${lms.upload.max-material-size:52428800}") long maxMaterialSize
     ) {
         this.cloudinary = cloudinary;
         this.maxImageSize = maxImageSize;
         this.maxVideoSize = maxVideoSize;
+        this.maxMaterialSize = maxMaterialSize;
+    }
+
+    public FileUploadResponseDTO uploadMaterial(MultipartFile file) {
+        return upload(file, "lesson-materials", MATERIAL_CONTENT_TYPES, MATERIAL_EXTENSIONS, maxMaterialSize);
     }
 
     public FileUploadResponseDTO uploadCourseCover(MultipartFile file) {
@@ -91,7 +112,7 @@ public class FileUploadService {
         
         String url;
         try {
-            String resourceType = folder.contains("video") ? "video" : "image";
+            String resourceType = folder.contains("video") ? "video" : folder.contains("material") ? "auto" : "image";
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                     "folder", folder,
                     "public_id", publicId,

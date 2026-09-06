@@ -13,6 +13,12 @@ public interface LessonRepository extends JpaRepository<Lessons, Long> {
     List<Lessons> findByInstructor_EmailAndSection_SectionId(String email, Long sectionId);
     List<Lessons> findByInstructor_EmailAndSection_Course_CourseId(String email, Long courseId);
 
+    List<Lessons> findBySection_Course_CourseIdOrderBySection_SectionIdAscOrderIndexAsc(Long courseId);
+
+    List<Lessons> findBySection_Course_CourseIdOrderByOrderIndexAsc(Long courseId);
+
+    List<Lessons> findBySection_SectionIdOrderByOrderIndexAsc(Long sectionId);
+
     @Modifying
     @Query("""
             delete from Lessons l

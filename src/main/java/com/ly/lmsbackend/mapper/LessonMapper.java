@@ -15,8 +15,13 @@ public class LessonMapper {
                 lesson.getTitle(),
                 lesson.getVideoUrl(),
                 lesson.getVideoPublicId(),
-                lesson.getSection().getSectionId(),
-                lesson.getSection().getTitle()
+                lesson.getSection() != null ? lesson.getSection().getSectionId() : null,
+                lesson.getSection() != null ? lesson.getSection().getTitle() : null,
+                lesson.getDescription(),
+                lesson.getTextContent(),
+                lesson.getOrderIndex(),
+                lesson.getDuration(),
+                lesson.getIsFree() != null ? lesson.getIsFree() : false
         );
     }
 
@@ -29,6 +34,11 @@ public class LessonMapper {
         lesson.setTitle(dto.title());
         lesson.setVideoUrl(dto.videoUrl());
         lesson.setVideoPublicId(dto.videoPublicId());
+        lesson.setDescription(dto.description());
+        lesson.setTextContent(dto.textContent());
+        lesson.setOrderIndex(dto.orderIndex() != null ? dto.orderIndex() : 0);
+        lesson.setDuration(dto.duration());
+        lesson.setIsFree(dto.isFree() != null ? dto.isFree() : false);
         lesson.setSection(section);
 
         return lesson;

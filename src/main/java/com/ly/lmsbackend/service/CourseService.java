@@ -12,8 +12,10 @@ import com.ly.lmsbackend.model.Categories;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -112,7 +114,7 @@ public class CourseService {
 
     public CourseDetailDTO getCourseDetail(Long courseId) {
         Courses course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new RuntimeException("Course id " + courseId + " not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course id " + courseId + " not found"));
 
         List<SectionDetailDTO> sectionsDetail = sectionRepository.findByCourse_CourseId(courseId)
                 .stream()
@@ -126,7 +128,12 @@ public class CourseService {
                                     lessons.getLessonId(),
                                     lessons.getTitle(),
                                     lessons.getVideoUrl(),
-                                    lessons.getVideoPublicId()
+                                    lessons.getVideoPublicId(),
+                                    lessons.getDescription(),
+                                    lessons.getTextContent(),
+                                    lessons.getOrderIndex(),
+                                    lessons.getDuration(),
+                                    lessons.getIsFree() != null ? lessons.getIsFree() : false
                             ))
                             .toList()
                 ))

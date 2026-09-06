@@ -38,6 +38,20 @@ public class Lessons {
     @Column(name = "video_public_id")
     private String videoPublicId;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "text_content", columnDefinition = "TEXT")
+    private String textContent;
+
+    @Column(name = "order_index")
+    private Integer orderIndex = 0;
+
+    private String duration;
+
+    @Column(name = "is_free")
+    private Boolean isFree = false;
+
     @CreatedBy
     private String createdBy;
 
@@ -62,4 +76,7 @@ public class Lessons {
     @ManyToOne
     @JoinColumn(name = "instructor_id")
     private Users instructor;
+
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LessonMaterial> materials;
 }

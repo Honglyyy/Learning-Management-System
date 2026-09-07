@@ -115,7 +115,7 @@ public class UserController {
     @PatchMapping("/api/users/{id}/role")
     public ResponseEntity<UserResponseDTO> updateUserRole(
             @PathVariable Long id,
-            @RequestBody UpdateRoleRequest request
+            @Valid @RequestBody UpdateRoleRequest request
     ) {
         return ResponseEntity.ok(
                 userService.updateUserRole(id, request.role())

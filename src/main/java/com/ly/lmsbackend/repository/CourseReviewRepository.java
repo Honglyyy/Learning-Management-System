@@ -11,6 +11,7 @@ import java.util.List;
 public interface CourseReviewRepository extends JpaRepository<CourseReviews, Long> {
     List<CourseReviews> findByCourse_CourseId(Long courseId);
     List<CourseReviews> findByCourseCourseId(Long courseId);
+    List<CourseReviews> findByCourse_CourseIdIn(List<Long> courseIds);
 
     @Modifying
     @Query("""

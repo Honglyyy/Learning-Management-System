@@ -18,6 +18,16 @@ public interface EnrollmentRepository extends JpaRepository<Enrollments, Long> {
 
     Optional<Enrollments> findByUser_EmailAndCourse_CourseId(String email, Long courseId);
 
+    long countByStatus(com.ly.lmsbackend.model.EnrollmentStatus status);
+
+    List<Enrollments> findByCourse_CourseIdIn(List<Long> courseIds);
+
+    long countByCourse_CourseIdIn(List<Long> courseIds);
+
+    long countByCourse_CourseIdInAndStatus(List<Long> courseIds, com.ly.lmsbackend.model.EnrollmentStatus status);
+
+    List<Enrollments> findByCourse_Instructor_Email(String email);
+
     @Modifying
     @Query("""
             delete from Enrollments e

@@ -36,6 +36,9 @@ export type JwtClaims = {
   [k: string]: unknown;
 };
 
+export const SESSION_EXPIRED_EVENT = "lms:session-expired";
+export type SessionExpiredReason = "inactivity" | "token_expired" | "unauthorized" | "manual";
+
 export function decodeJwt(token: string | null): JwtClaims | null {
   if (!token) return null;
   try {
@@ -49,6 +52,24 @@ export function decodeJwt(token: string | null): JwtClaims | null {
       return null;
     }
   }
+}
+
+export function isTokenExpired(token: string | null): boolean {
+  if (!token) return false;
+  const claims = decodeJwt(token);
+  if (!claims || typeof claims.exp !== "number") return false;
+  // Check if expiration has passed (claims.exp is in seconds)
+  return claims.exp * 1000 <= Date.now();
+}
+
+export function notifySessionExpired(reason: SessionExpiredReason = "token_expired", message?: string) {
+  if (typeof window === "undefined") return;
+  setToken(null);
+  window.dispatchEvent(
+    new CustomEvent(SESSION_EXPIRED_EVENT, {
+      detail: { reason, message: message || "Your session has expired. Please sign in again." },
+    })
+  );
 }
 
 export class ApiError extends Error {
@@ -82,7 +103,13 @@ export async function api<T = any>(path: string, opts: ApiOptions = {}): Promise
   const headers: Record<string, string> = {};
   if (opts.auth !== false) {
     const t = getToken();
-    if (t) headers.Authorization = `Bearer ${t}`;
+    if (t) {
+      if (isTokenExpired(t)) {
+        notifySessionExpired("token_expired", "Your session has expired. Please sign in again.");
+        throw new ApiError("Session has expired. Please sign in again.", 401, null);
+      }
+      headers.Authorization = `Bearer ${t}`;
+    }
   }
   let body: BodyInit | undefined;
   if (opts.formData) {
@@ -106,6 +133,9 @@ export async function api<T = any>(path: string, opts: ApiOptions = {}): Promise
       (data && typeof data === "object" && (data.message || data.error)) ||
       (typeof data === "string" && data) ||
       `Request failed (${res.status})`;
+    if (res.status === 401 && opts.auth !== false && getToken()) {
+      notifySessionExpired("unauthorized", "Unauthorized: Your session has expired or is invalid.");
+    }
     throw new ApiError(msg, res.status, data);
   }
   return data as T;

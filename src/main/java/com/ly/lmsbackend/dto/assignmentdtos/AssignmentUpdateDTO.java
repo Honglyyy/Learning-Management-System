@@ -1,5 +1,7 @@
 package com.ly.lmsbackend.dto.assignmentdtos;
 
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.sql.Timestamp;
 
 public record AssignmentUpdateDTO(
@@ -9,6 +11,7 @@ public record AssignmentUpdateDTO(
         String instructions,
         Timestamp startDate,
         Timestamp dueDate,
+        @PositiveOrZero(message = "Max score must be positive or zero")
         Double maxScore,
         String supportingFileUrl,
         String supportingFilePublicId,

@@ -49,11 +49,17 @@ class Stage1ControllerMockMvcTests {
     private MockMvc mockMvcStudent;
     private MockMvc mockMvcInstructor;
     private MockMvc mockMvcUser;
+    private MockMvc mockMvcAuth;
 
     @Mock private StudentService studentService;
     @Mock private InstructorService instructorService;
     @Mock private UserService userService;
     @Mock private EmailService emailService;
+    @Mock private org.springframework.security.authentication.AuthenticationManager authenticationManager;
+    @Mock private com.ly.lmsbackend.util.JwtUtil jwtUtil;
+    @Mock private com.ly.lmsbackend.mapper.UserMapper userMapper;
+    @Mock private com.ly.lmsbackend.repository.UserRepository userRepository;
+    @Mock private com.ly.lmsbackend.service.ActivityLogService activityLogService;
 
     private ObjectMapper objectMapper;
     private UsernamePasswordAuthenticationToken studentAuth;
@@ -67,6 +73,9 @@ class Stage1ControllerMockMvcTests {
         mockMvcStudent = MockMvcBuilders.standaloneSetup(new StudentProfileController(studentService)).build();
         mockMvcInstructor = MockMvcBuilders.standaloneSetup(new InstructorController(instructorService)).build();
         mockMvcUser = MockMvcBuilders.standaloneSetup(new UserController(userService)).build();
+        mockMvcAuth = MockMvcBuilders.standaloneSetup(new com.ly.lmsbackend.controller.AuthController(
+                authenticationManager, jwtUtil, userMapper, emailService, userRepository, activityLogService
+        )).build();
 
         studentAuth = new UsernamePasswordAuthenticationToken(
                 "student@test.com",
@@ -330,5 +339,42 @@ class Stage1ControllerMockMvcTests {
                 .andExpect(content().string("Password changed successfully"));
 
         verify(userService).changePassword(eq("student@test.com"), any(ChangePasswordRequest.class));
+    }
+
+    @Test
+    void testGetSession_returnsSessionDetails() throws Exception {
+        com.ly.lmsbackend.model.Users mockUser = new com.ly.lmsbackend.model.Users();
+        mockUser.setId(10L);
+        mockUser.setEmail("student@test.com");
+        mockUser.setUsername("student10");
+        mockUser.setRole(Roles.STUDENT);
+
+        when(userRepository.findByEmail("student@test.com")).thenReturn(java.util.Optional.of(mockUser));
+
+        mockMvcAuth.perform(get("/api/auth/session")
+                        .principal(studentAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated").value(true))
+                .andExpect(jsonPath("$.email").value("student@test.com"))
+                .andExpect(jsonPath("$.username").value("student10"))
+                .andExpect(jsonPath("$.role").value("STUDENT"))
+                .andExpect(jsonPath("$.expiresInSeconds").value(86400));
+    }
+
+    @Test
+    void testLogout_logsActivityAndReturnsOk() throws Exception {
+        com.ly.lmsbackend.model.Users mockUser = new com.ly.lmsbackend.model.Users();
+        mockUser.setId(10L);
+        mockUser.setEmail("student@test.com");
+
+        when(userRepository.findByEmail("student@test.com")).thenReturn(java.util.Optional.of(mockUser));
+
+        mockMvcAuth.perform(post("/api/auth/logout")
+                        .principal(studentAuth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Logged out successfully"))
+                .andExpect(jsonPath("$.timestamp").isNumber());
+
+        verify(activityLogService).logActivity(eq(mockUser), eq("USER_LOGOUT"), any(String.class));
     }
 }

@@ -4,6 +4,7 @@ import com.ly.lmsbackend.dto.coursedtos.CourseResponseDTO;
 import com.ly.lmsbackend.dto.sectiondtos.SectionCreateDTO;
 import com.ly.lmsbackend.dto.sectiondtos.SectionResponseDTO;
 import com.ly.lmsbackend.service.SectionService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,7 +28,7 @@ public class SectionController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/sections")
-    public ResponseEntity<SectionResponseDTO> addSection(@RequestBody SectionCreateDTO dto){
+    public ResponseEntity<SectionResponseDTO> addSection(@Valid @RequestBody SectionCreateDTO dto){
         return new ResponseEntity<>(sectionService.addSection(dto),HttpStatus.CREATED);
     }
 
@@ -42,7 +43,7 @@ public class SectionController {
     @PutMapping("/api/sections/{id}")
     public ResponseEntity<SectionResponseDTO> updateSection(
             @PathVariable Long id,
-            @RequestBody SectionCreateDTO dto){
+            @Valid @RequestBody SectionCreateDTO dto){
         return new ResponseEntity<>(sectionService.updateSection(id,dto),HttpStatus.OK);
     }
 
@@ -64,7 +65,7 @@ public class SectionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/sections/instructor/me")
     public ResponseEntity<SectionResponseDTO> createMySection(
-            @RequestBody SectionCreateDTO dto,
+            @Valid @RequestBody SectionCreateDTO dto,
             Authentication authentication
     ) {
         return new ResponseEntity<>(
@@ -86,7 +87,7 @@ public class SectionController {
     @PutMapping("/api/sections/instructor/me/{id}")
     public ResponseEntity<SectionResponseDTO> updateMySection(
             @PathVariable Long id,
-            @RequestBody SectionCreateDTO dto,
+            @Valid @RequestBody SectionCreateDTO dto,
             Authentication authentication
     ) {
 

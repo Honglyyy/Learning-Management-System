@@ -3,6 +3,7 @@ package com.ly.lmsbackend.controller;
 import com.ly.lmsbackend.dto.lessondtos.LessonMaterialCreateDTO;
 import com.ly.lmsbackend.dto.lessondtos.LessonMaterialDTO;
 import com.ly.lmsbackend.service.LessonMaterialService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,7 +34,7 @@ public class LessonMaterialController {
     @PostMapping("/api/lessons/{lessonId}/materials")
     public ResponseEntity<LessonMaterialDTO> attachMaterial(
             @PathVariable Long lessonId,
-            @RequestBody LessonMaterialCreateDTO dto,
+            @Valid @RequestBody LessonMaterialCreateDTO dto,
             Authentication authentication
     ) {
         return new ResponseEntity<>(

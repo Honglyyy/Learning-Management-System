@@ -4,6 +4,7 @@ import com.ly.lmsbackend.dto.lessondtos.LessonCreateDTO;
 import com.ly.lmsbackend.dto.lessondtos.LessonQuizDTO;
 import com.ly.lmsbackend.dto.lessondtos.LessonResponseDTO;
 import com.ly.lmsbackend.service.LessonService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,7 +35,7 @@ public class LessonController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/lessons")
-    public ResponseEntity<LessonResponseDTO> addLesson(@RequestBody LessonCreateDTO dto){
+    public ResponseEntity<LessonResponseDTO> addLesson(@Valid @RequestBody LessonCreateDTO dto){
         return new ResponseEntity<>(lessonService.addLesson(dto), HttpStatus.CREATED);
     }
 
@@ -42,7 +43,7 @@ public class LessonController {
     @PutMapping("/api/lessons/{id}")
     public ResponseEntity<LessonResponseDTO> updateLesson(
             @PathVariable Long id,
-            @RequestBody LessonCreateDTO dto
+            @Valid @RequestBody LessonCreateDTO dto
     ){
         return new ResponseEntity<>(lessonService.updateLesson(id,dto), HttpStatus.OK);
     }
@@ -79,7 +80,7 @@ public class LessonController {
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/lessons/instructor/me")
     public ResponseEntity<LessonResponseDTO> createMyLesson(
-            @RequestBody LessonCreateDTO dto,
+            @Valid @RequestBody LessonCreateDTO dto,
             Authentication authentication
     ) {
         return new ResponseEntity<>(
@@ -101,7 +102,7 @@ public class LessonController {
     @PutMapping("/api/lessons/instructor/me/{id}")
     public ResponseEntity<LessonResponseDTO> updateMyLesson(
             @PathVariable Long id,
-            @RequestBody LessonCreateDTO dto,
+            @Valid @RequestBody LessonCreateDTO dto,
             Authentication authentication
     ){
         return ResponseEntity.ok(

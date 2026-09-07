@@ -4,6 +4,7 @@ import com.ly.lmsbackend.dto.answerdtos.AnswerCreateDTO;
 import com.ly.lmsbackend.dto.answerdtos.AnswerResponseDTO;
 import com.ly.lmsbackend.model.Answers;
 import com.ly.lmsbackend.service.AnswerService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +29,7 @@ public class AnswerController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/answers")
-    ResponseEntity<AnswerResponseDTO> addAnswer(@RequestBody AnswerCreateDTO dto){
+    ResponseEntity<AnswerResponseDTO> addAnswer(@Valid @RequestBody AnswerCreateDTO dto){
         return new ResponseEntity<>(answerService.addAnswer(dto), HttpStatus.CREATED);
     }
 
@@ -36,7 +37,7 @@ public class AnswerController {
     @PutMapping("/api/answers/{id}")
     ResponseEntity<Answers> updateAnswer(
             @PathVariable Long id,
-            @RequestBody AnswerCreateDTO dto){
+            @Valid @RequestBody AnswerCreateDTO dto){
         return new ResponseEntity<>(answerService.updateAnswer(id,dto), HttpStatus.OK);
     }
 

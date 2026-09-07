@@ -12,6 +12,11 @@ import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payments, Long> {
     List<Payments> findByUser_Email(String email);
+    List<Payments> findByStatus(PaymentStatus status);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payments p WHERE p.status = :status")
+    java.math.BigDecimal sumAmountByStatus(@Param("status") PaymentStatus status);
+
     Optional<Payments> findFirstByUser_EmailAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
             String email,
             Long courseId,

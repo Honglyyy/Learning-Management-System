@@ -3,6 +3,7 @@ package com.ly.lmsbackend.controller;
 import com.ly.lmsbackend.dto.questiondtos.QuestionCreateDTO;
 import com.ly.lmsbackend.dto.questiondtos.QuestionResponseDTO;
 import com.ly.lmsbackend.service.QuestionService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,7 +27,7 @@ public class QuestionController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/questions")
-    public ResponseEntity<QuestionResponseDTO> addQuestion(@RequestBody QuestionCreateDTO dto){
+    public ResponseEntity<QuestionResponseDTO> addQuestion(@Valid @RequestBody QuestionCreateDTO dto){
         return new ResponseEntity<>(questionService.addQuesion(dto),HttpStatus.CREATED);
     }
 
@@ -34,7 +35,7 @@ public class QuestionController {
     @PutMapping("/api/questions/{id}")
     public ResponseEntity<QuestionResponseDTO> updateQuestion(
             @PathVariable Long id,
-            @RequestBody QuestionCreateDTO dto
+            @Valid @RequestBody QuestionCreateDTO dto
     ){
         return new ResponseEntity<>(questionService.updateQuestion(id,dto),HttpStatus.OK);
     }

@@ -2,6 +2,7 @@ package com.ly.lmsbackend.controller;
 
 import com.ly.lmsbackend.dto.assignmentdtos.*;
 import com.ly.lmsbackend.service.AssignmentService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,7 +23,7 @@ public class AssignmentController {
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/assignments")
     public ResponseEntity<AssignmentResponseDTO> createAssignment(
-            @RequestBody AssignmentCreateDTO dto,
+            @Valid @RequestBody AssignmentCreateDTO dto,
             Authentication authentication
     ) {
         return new ResponseEntity<>(
@@ -55,7 +56,7 @@ public class AssignmentController {
     @PutMapping("/api/assignments/{id}")
     public ResponseEntity<AssignmentResponseDTO> updateAssignment(
             @PathVariable Long id,
-            @RequestBody AssignmentUpdateDTO dto,
+            @Valid @RequestBody AssignmentUpdateDTO dto,
             Authentication authentication
     ) {
         return ResponseEntity.ok(assignmentService.updateAssignment(id, dto, authentication.getName()));
@@ -75,7 +76,7 @@ public class AssignmentController {
     @PostMapping("/api/assignments/{id}/submit")
     public ResponseEntity<AssignmentSubmissionResponseDTO> submitAssignment(
             @PathVariable Long id,
-            @RequestBody AssignmentSubmitDTO dto,
+            @Valid @RequestBody AssignmentSubmitDTO dto,
             Authentication authentication
     ) {
         return new ResponseEntity<>(
@@ -106,7 +107,7 @@ public class AssignmentController {
     @PutMapping("/api/assignments/submissions/{id}/grade")
     public ResponseEntity<AssignmentSubmissionResponseDTO> gradeSubmission(
             @PathVariable Long id,
-            @RequestBody AssignmentGradeDTO dto,
+            @Valid @RequestBody AssignmentGradeDTO dto,
             Authentication authentication
     ) {
         return ResponseEntity.ok(assignmentService.gradeSubmission(id, dto, authentication.getName()));

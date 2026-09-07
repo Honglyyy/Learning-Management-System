@@ -5,6 +5,7 @@ import com.ly.lmsbackend.model.CourseLevel;
 import com.ly.lmsbackend.model.CourseStatus;
 import com.ly.lmsbackend.service.CourseService;
 import com.ly.lmsbackend.service.SectionService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -94,7 +95,7 @@ public class CourseController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/courses")
-    public ResponseEntity<CourseResponseDTO> createCourse(@RequestBody CourseCreateDTO dto) {
+    public ResponseEntity<CourseResponseDTO> createCourse(@Valid @RequestBody CourseCreateDTO dto) {
         return new ResponseEntity<>(courseService.addCourse(dto), HttpStatus.CREATED);
     }
 
@@ -107,7 +108,7 @@ public class CourseController {
     @PreAuthorize("hasRole('INSTRUCTOR')")
     @PostMapping("/api/courses/instructor/me")
     public ResponseEntity<CourseResponseDTO> createMyCourse(
-            @RequestBody CourseCreateDTO dto,
+            @Valid @RequestBody CourseCreateDTO dto,
             Authentication authentication
     ) {
         return new ResponseEntity<>(
@@ -129,7 +130,7 @@ public class CourseController {
     @PutMapping("/api/courses/instructor/me/{id}")
     public ResponseEntity<CourseResponseDTO> updateMyCourse(
             @PathVariable Long id,
-            @RequestBody CourseCreateDTO dto,
+            @Valid @RequestBody CourseCreateDTO dto,
             Authentication authentication
     ) {
         return ResponseEntity.ok(
@@ -152,7 +153,7 @@ public class CourseController {
     @PutMapping("/api/courses/{id}")
     public ResponseEntity<CourseResponseDTO> updateCourse(
             @PathVariable Long id,
-            @RequestBody CourseCreateDTO dto
+            @Valid @RequestBody CourseCreateDTO dto
     ) {
         return ResponseEntity.ok(courseService.updateCourse(id, dto));
     }

@@ -21,6 +21,8 @@ function LoginPage() {
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
 
+  const reason = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("reason") : null;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -48,6 +50,21 @@ function LoginPage() {
           <p className="text-sm text-muted-foreground">Sign in to your Lumen LMS account.</p>
         </CardHeader>
         <CardContent>
+          {reason === "inactivity" && (
+            <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
+              <strong>Session Timed Out:</strong> You were automatically signed out after 15 minutes of inactivity. Please sign in again.
+            </div>
+          )}
+          {reason === "token_expired" && (
+            <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
+              <strong>Session Expired:</strong> Your security token has expired. Please sign in again.
+            </div>
+          )}
+          {reason === "unauthorized" && (
+            <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <strong>Access Required:</strong> Your session is no longer valid. Please sign in again.
+            </div>
+          )}
           <ApiAlert error={error} />
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">

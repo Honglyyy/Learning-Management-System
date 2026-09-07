@@ -563,8 +563,12 @@ public class CertificateService {
                                 <div class="sig-name">{{INSTRUCTOR_NAME}}</div>
                                 <div class="sig-role">Program Director</div>
                             </div>
-                            
-                           
+                            <div class="signature-box">
+                                <div class="signature-draw">Jennifer Walsh</div>
+                                <div class="sig-line"></div>
+                                <div class="sig-name">Jennifer Walsh</div>
+                                <div class="sig-role">Head of Curriculum</div>
+                            </div>
                         </div>
                         
                         <!-- Pixel mosaic in bottom left -->

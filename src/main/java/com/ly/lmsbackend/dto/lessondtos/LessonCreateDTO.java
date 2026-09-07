@@ -1,6 +1,9 @@
 package com.ly.lmsbackend.dto.lessondtos;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record LessonCreateDTO(
+        @NotBlank(message = "Title is required")
         String title,
         String videoUrl,
         String videoPublicId,

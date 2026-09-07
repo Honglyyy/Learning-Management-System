@@ -13,6 +13,18 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
 
     Optional<QuizAttempt> findByUser_EmailAndQuiz_QuizId(String email, Long quizId);
 
+    java.util.List<QuizAttempt> findByUser_Email(String email);
+
+    java.util.List<QuizAttempt> findByUser_Id(Long userId);
+
+    java.util.List<QuizAttempt> findByQuiz_QuizId(Long quizId);
+
+    java.util.List<QuizAttempt> findByQuiz_QuizIdIn(java.util.List<Long> quizIds);
+
+    java.util.List<QuizAttempt> findByEnrollment_Course_CourseId(Long courseId);
+
+    java.util.List<QuizAttempt> findByEnrollment_Course_CourseIdIn(java.util.List<Long> courseIds);
+
     @Modifying
     @Query("delete from QuizAttempt qa where qa.enrollment.enrollmentId = :enrollmentId")
     void deleteAllByEnrollmentId(@Param("enrollmentId") Long enrollmentId);

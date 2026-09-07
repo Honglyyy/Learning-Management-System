@@ -6,6 +6,7 @@ import com.ly.lmsbackend.dto.quizdtos.QuizCreateDTO;
 import com.ly.lmsbackend.dto.quizdtos.QuizResponseDTO;
 import com.ly.lmsbackend.dto.quizdtos.QuizSubmitDTO;
 import com.ly.lmsbackend.service.QuizService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -44,7 +45,7 @@ public class QuizController {
     @PostMapping("/api/quizzes/{id}/submit")
     public ResponseEntity<QuizAttemptResponseDTO> submitQuiz(
             @PathVariable Long id,
-            @RequestBody QuizSubmitDTO dto,
+            @Valid @RequestBody QuizSubmitDTO dto,
             Authentication authentication
     ) {
         return ResponseEntity.ok(quizService.submitQuiz(id, dto, authentication.getName()));
@@ -52,7 +53,7 @@ public class QuizController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/quizzes")
-    public ResponseEntity<QuizResponseDTO> addQuiz(@RequestBody QuizCreateDTO dto){
+    public ResponseEntity<QuizResponseDTO> addQuiz(@Valid @RequestBody QuizCreateDTO dto){
         return new ResponseEntity<>(quizService.addQuiz(dto),HttpStatus.CREATED);
     }
 
@@ -60,7 +61,7 @@ public class QuizController {
     @PutMapping("/api/quizzes/{id}")
     public ResponseEntity<QuizResponseDTO> updateQuiz(
             @PathVariable Long id,
-            @RequestBody QuizCreateDTO dto
+            @Valid @RequestBody QuizCreateDTO dto
     ){
         return new ResponseEntity<>(quizService.updateQuiz(id,dto), HttpStatus.OK);
     }

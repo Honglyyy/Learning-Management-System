@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Build outputs
+target/
+build/
+*.jar
+*.war
+
+# IDE / Editor configs
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.apt_generated
+.sts4-cache
+
+# Environment and secrets
+.env
+.env.*
+*.log
+
+# Docker specific
+docker-compose*.yml
+.dockerignore
+
+# Documentation & temporary files
+*.md
+!README.md
+improvements/

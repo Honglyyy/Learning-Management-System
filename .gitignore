@@ -33,3 +33,7 @@ build/
 .vscode/
 
 improvements
+
+### Environment files ###
+.env
+.env.local

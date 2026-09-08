@@ -126,6 +126,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>LMS</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

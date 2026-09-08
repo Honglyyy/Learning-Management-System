@@ -25,6 +25,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserService.class);
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
@@ -47,6 +49,9 @@ public class UserService {
         if(userRepository.findByEmail(request.email()).isPresent()){
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
+        if(userRepository.findByUsername(request.username()).isPresent()){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists");
+        }
 
         Roles role = request.role();
         if (role == null) {
@@ -61,6 +66,7 @@ public class UserService {
         users.setPhoneNumber(request.phoneNumber());
         users.setUserId(UUID.randomUUID().toString());
         users.setRole(role);
+        users.setIsVerified(false);
 
         if (role == Roles.STUDENT || role == Roles.USER) {
             int year = Year.now().getValue();
@@ -100,7 +106,7 @@ public class UserService {
         Users existingUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        if(existingUser.getIsVerified()){
+        if(Boolean.TRUE.equals(existingUser.getIsVerified())){
             return;
         }
 
@@ -108,14 +114,19 @@ public class UserService {
         existingUser.setVerifyOtpExpireAt(expireAt);
 
         userRepository.save(existingUser);
+        log.info("Generated verification OTP for user {}: {}", email, otp);
 
         try{
             emailService.sendOtp(existingUser.getEmail(),otp);
         }
         catch (Exception e){
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+            log.warn("Could not deliver OTP email to {}: {}. Verification code is {}", email, e.getMessage(), otp);
+            // Do not rethrow Exception to prevent rolling back user registration in @Transactional
         }
+    }
+
+    public void resendVerificationOtp(String email){
+        sendVerificationOtp(email);
     }
 
     public UserResponseDTO verifyOtp(String email,String otp){
@@ -134,9 +145,13 @@ public class UserService {
         existingUser.setOtp(null);
         existingUser.setVerifyOtpExpireAt(0L);
 
-        userRepository.save(existingUser);
-        emailService.successOtp(existingUser.getEmail());
-        return  userMapper.dto(existingUser);
+        Users saved = userRepository.save(existingUser);
+        try {
+            emailService.successOtp(saved.getEmail());
+        } catch (Exception e) {
+            log.warn("Failed to send successOtp email to {}: {}", saved.getEmail(), e.getMessage());
+        }
+        return  userMapper.dto(saved);
     }
 
     public void sendResetOtp(String email){
@@ -150,13 +165,13 @@ public class UserService {
         user.setResetOtpExpireAt(expireAt);
 
         userRepository.save(user);
+        log.info("Generated reset OTP for user {}: {}", email, otp);
 
         try{
             emailService.sendResetOtp(user.getEmail(), otp);
         }
-
         catch (Exception e){
-            e.printStackTrace();
+            log.warn("Could not deliver reset OTP email to {}: {}. Reset code is {}", email, e.getMessage(), otp);
         }
     }
 

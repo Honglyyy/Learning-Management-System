@@ -53,6 +53,7 @@ public class SecurityConfig {
                                 "/register", "/register/", "/register/**",
                                 "/admin/register","/admin/register/","/admin/register/**",
                                 "/verify-otp", "/verify-otp/", "/verify-otp/**",
+                                "/resend-otp", "/resend-otp/", "/resend-otp/**",
                                 "/authenticate","/authenticate/", "/authenticate/**",
                                 "/send-reset-otp","/send-reset-otp/","/send-reset-otp/**",
                                 "/reset-password","/reset-password/","/reset-password/**"

@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -64,6 +65,25 @@ public class UserController {
     public ResponseEntity<UserResponseDTO> verifyUser(@Valid @RequestBody VerifyUserOtp verifyUserOtp) {
         UserResponseDTO user = userService.verifyOtp(verifyUserOtp.email(), verifyUserOtp.otp());
         return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<Map<String, Object>> resendOtp(
+            @RequestBody(required = false) Map<String, String> body,
+            @RequestParam(required = false) String email
+    ) {
+        String targetEmail = email;
+        if ((targetEmail == null || targetEmail.isBlank()) && body != null) {
+            targetEmail = body.get("email");
+        }
+        if (targetEmail == null || targetEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+        userService.resendVerificationOtp(targetEmail.trim());
+        return ResponseEntity.ok(Map.of(
+                "message", "Verification code resent successfully",
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     @PostMapping("/send-reset-otp")

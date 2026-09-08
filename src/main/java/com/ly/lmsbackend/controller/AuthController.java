@@ -47,16 +47,27 @@ public class AuthController {
                 UsernamePasswordAuthenticationToken user =
                         new UsernamePasswordAuthenticationToken(isVerifiedUser.getEmail(), authRequest.password());
                 authenticationManager.authenticate(user);
-                if (isVerifiedUser.getRole() != Roles.ADMIN) {
-                    emailService.sendWelcomeLogin(isVerifiedUser.getEmail());
-                }
-                if (activityLogService != null) {
-                    activityLogService.logActivity(isVerifiedUser, "USER_LOGIN", "User logged in to LMS");
-                }
-                return ResponseEntity.ok(jwtUtil.generateToken(isVerifiedUser));
             } catch (Exception e) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
             }
+
+            try {
+                if (isVerifiedUser.getRole() != Roles.ADMIN) {
+                    emailService.sendWelcomeLogin(isVerifiedUser.getEmail());
+                }
+            } catch (Exception e) {
+                // Non-fatal: email failure must not break login
+            }
+
+            try {
+                if (activityLogService != null) {
+                    activityLogService.logActivity(isVerifiedUser, "USER_LOGIN", "User logged in to LMS");
+                }
+            } catch (Exception e) {
+                // Non-fatal: activity log failure must not break login
+            }
+
+            return ResponseEntity.ok(jwtUtil.generateToken(isVerifiedUser));
         } else {
             return ResponseEntity.badRequest().body("User account is not verified");
         }

@@ -13,6 +13,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ActuatorEndpointTests {
 
     @Test
+    @DisplayName("ActuatorAliasController forwards / to /actuator/health")
+    void testRootForwarding() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new ActuatorAliasController()).build();
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/actuator/health"));
+    }
+
+    @Test
     @DisplayName("ActuatorAliasController forwards /health directly to /actuator/health")
     void testDirectHealthForwarding() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new ActuatorAliasController()).build();

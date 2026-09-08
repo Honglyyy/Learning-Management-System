@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class ActuatorAliasController {
 
-    @RequestMapping(value = "/health")
+    @RequestMapping(value = {"/", "/health"})
     public String forwardHealth() {
         return "forward:/actuator/health";
     }

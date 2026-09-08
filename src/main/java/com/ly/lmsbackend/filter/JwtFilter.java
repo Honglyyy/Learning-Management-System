@@ -31,8 +31,8 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        // ✅ IMPORTANT: skip JWT for static files
-        if (path.startsWith("/uploads/")) {
+        // ✅ IMPORTANT: skip JWT for static files and health/actuator endpoints
+        if (path.startsWith("/uploads/") || path.startsWith("/actuator") || path.startsWith("/acuator") || path.equals("/health")) {
             filterChain.doFilter(request, response);
             return;
         }

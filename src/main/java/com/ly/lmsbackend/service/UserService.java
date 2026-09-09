@@ -114,13 +114,13 @@ public class UserService {
         existingUser.setVerifyOtpExpireAt(expireAt);
 
         userRepository.save(existingUser);
-        log.info("Generated verification OTP for user {}: {}", email, otp);
+        log.info("Generated verification OTP for user {}", email);
 
         try{
             emailService.sendOtp(existingUser.getEmail(),otp);
         }
         catch (Exception e){
-            log.warn("Could not deliver OTP email to {}: {}. Verification code is {}", email, e.getMessage(), otp);
+            log.warn("Could not deliver OTP email to {}: {}", email, e.getMessage());
             // Do not rethrow Exception to prevent rolling back user registration in @Transactional
         }
     }
@@ -133,11 +133,11 @@ public class UserService {
         Users existingUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        if(existingUser.getVerifyOtpExpireAt() < System.currentTimeMillis()){
+        if (existingUser.getVerifyOtpExpireAt() == null || existingUser.getVerifyOtpExpireAt() < System.currentTimeMillis()) {
             throw new RuntimeException("Otp expired");
         }
 
-        if(!existingUser.getOtp().equals(otp)){
+        if (existingUser.getOtp() == null || !existingUser.getOtp().equals(otp)) {
             throw new RuntimeException("Invalid Otp");
         }
 
@@ -165,13 +165,13 @@ public class UserService {
         user.setResetOtpExpireAt(expireAt);
 
         userRepository.save(user);
-        log.info("Generated reset OTP for user {}: {}", email, otp);
+        log.info("Generated reset OTP for user {}", email);
 
         try{
             emailService.sendResetOtp(user.getEmail(), otp);
         }
         catch (Exception e){
-            log.warn("Could not deliver reset OTP email to {}: {}. Reset code is {}", email, e.getMessage(), otp);
+            log.warn("Could not deliver reset OTP email to {}: {}", email, e.getMessage());
         }
     }
 
@@ -179,10 +179,10 @@ public class UserService {
         Users user =  userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        if(user.getResetOtpExpireAt() < System.currentTimeMillis()){
+        if (user.getResetOtpExpireAt() == null || user.getResetOtpExpireAt() < System.currentTimeMillis()) {
             throw new RuntimeException("Otp expired");
         }
-        if(!user.getResetOtp().equals(otp)||user.getResetOtp() == null){
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp)) {
             throw new RuntimeException("Invalid Otp");
         }
 

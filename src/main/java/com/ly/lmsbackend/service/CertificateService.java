@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.HtmlUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -169,7 +170,7 @@ public class CertificateService {
                     <p>The certificate code <strong>{{CODE}}</strong> could not be verified in our records.</p>
                 </body>
                 </html>
-                """.replace("{{CODE}}", code != null ? code : "");
+                """.replace("{{CODE}}", code != null ? HtmlUtils.htmlEscape(code) : "");
         }
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMMM dd, yyyy", Locale.ENGLISH);
@@ -180,12 +181,12 @@ public class CertificateService {
     }
 
     private String buildCertificateTemplateHtml(CertificateVerifyDTO v, String dateStr, String qrSvg) {
-        String courseCategory = v.courseTitle() != null ? v.courseTitle() : "Professional Studies";
-        String instructorName = v.instructorName() != null ? v.instructorName() : "Dr. Michael Chen";
-        String studentName = v.studentName() != null ? v.studentName() : "Student";
-        String courseTitle = v.courseTitle() != null ? v.courseTitle() : "Course";
-        String duration = v.programDuration() != null ? v.programDuration() : "16 Weeks (240 Hours)";
-        String certCode = v.certificateCode() != null ? v.certificateCode() : "";
+        String courseCategory = HtmlUtils.htmlEscape(v.courseTitle() != null ? v.courseTitle() : "Professional Studies");
+        String instructorName = HtmlUtils.htmlEscape(v.instructorName() != null ? v.instructorName() : "Dr. Michael Chen");
+        String studentName = HtmlUtils.htmlEscape(v.studentName() != null ? v.studentName() : "Student");
+        String courseTitle = HtmlUtils.htmlEscape(v.courseTitle() != null ? v.courseTitle() : "Course");
+        String duration = HtmlUtils.htmlEscape(v.programDuration() != null ? v.programDuration() : "16 Weeks (240 Hours)");
+        String certCode = HtmlUtils.htmlEscape(v.certificateCode() != null ? v.certificateCode() : "");
 
         String template = """
             <!DOCTYPE html>
@@ -601,11 +602,13 @@ public class CertificateService {
         return "16 Weeks (240 Hours)";
     }
 
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     private String generateUniqueCertificateCode() {
         String code;
         do {
-            int randomNum = 1000 + new Random().nextInt(9000);
-            code = "DA-2026-03-" + randomNum;
+            int randomPart = SECURE_RANDOM.nextInt(0x1000000);
+            code = String.format("DA-%tY-%tm-%06X", new Date(), new Date(), randomPart);
         } while (certificateRepository.existsByCertificateCode(code));
         return code;
     }

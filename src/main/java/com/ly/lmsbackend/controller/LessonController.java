@@ -33,13 +33,13 @@ public class LessonController {
         return new ResponseEntity<>(lessonService.getLesson(id), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/api/lessons")
     public ResponseEntity<LessonResponseDTO> addLesson(@Valid @RequestBody LessonCreateDTO dto){
         return new ResponseEntity<>(lessonService.addLesson(dto), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/api/lessons/{id}")
     public ResponseEntity<LessonResponseDTO> updateLesson(
             @PathVariable Long id,
@@ -48,7 +48,7 @@ public class LessonController {
         return new ResponseEntity<>(lessonService.updateLesson(id,dto), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/api/lessons/{id}")
     public ResponseEntity<String> deleteLesson(@PathVariable Long id){
         lessonService.deleteLesson(id);

@@ -30,6 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class QuizService {
@@ -87,6 +88,11 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public QuizDetailDTO getQuizByLesson(Long lessonId) {
+        return getQuizByLesson(lessonId, null, false);
+    }
+
+    @Transactional(readOnly = true)
+    public QuizDetailDTO getQuizByLesson(Long lessonId, String email, boolean isAdminOrInstructor) {
         Quizzes quiz = quizRepository.findByLesson_LessonId(lessonId)
                 .stream()
                 .findFirst()
@@ -94,6 +100,13 @@ public class QuizService {
                         HttpStatus.NOT_FOUND,
                         "Quiz for lesson id " + lessonId + " is not found"
                 ));
+
+        boolean revealAnswers = isAdminOrInstructor;
+        if (!revealAnswers && email != null) {
+            revealAnswers = quizAttemptRepository.findByUser_EmailAndQuiz_QuizId(email, quiz.getQuizId()).isPresent();
+        }
+
+        final boolean showAnswers = revealAnswers;
 
         return new QuizDetailDTO(
                 quiz.getQuizId(),
@@ -110,7 +123,7 @@ public class QuizService {
                                         .map(answer -> new AnswerDetailDTO(
                                                 answer.getAnswerId(),
                                                 answer.getAnswerText(),
-                                                answer.getIsCorrect()
+                                                showAnswers ? answer.getIsCorrect() : null
                                         ))
                                         .toList()
                         ))
@@ -153,7 +166,16 @@ public class QuizService {
                     .findFirst()
                     .orElse(null);
 
-            if (correctAnswer != null && selectedAnswerIds.contains(correctAnswer.getAnswerId())) {
+            Set<Long> questionAnswerIds = question.getAnswers() == null ? Set.of() : question.getAnswers()
+                    .stream()
+                    .map(Answers::getAnswerId)
+                    .collect(Collectors.toSet());
+
+            List<Long> chosenForQuestion = selectedAnswerIds.stream()
+                    .filter(questionAnswerIds::contains)
+                    .toList();
+
+            if (correctAnswer != null && chosenForQuestion.size() == 1 && chosenForQuestion.contains(correctAnswer.getAnswerId())) {
                 earnedPoints += question.getPoint() == null ? defaultQuestionPoints : question.getPoint();
                 correctAnswers++;
             }

@@ -18,13 +18,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class StudentProfileController {
     private final StudentService studentService;
 
-    @PreAuthorize("hasAnyRole('STUDENT', 'USER')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/profile")
     public ResponseEntity<StudentProfileResponseDTO> getProfile(Authentication authentication) {
         return ResponseEntity.ok(studentService.getProfile(authentication.getName()));
     }
 
-    @PreAuthorize("hasAnyRole('STUDENT', 'USER')")
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/profile")
     public ResponseEntity<StudentProfileResponseDTO> updateProfile(
             Authentication authentication,
@@ -33,7 +33,7 @@ public class StudentProfileController {
         return ResponseEntity.ok(studentService.updateProfile(authentication.getName(), dto));
     }
 
-    @PreAuthorize("hasAnyRole('STUDENT', 'USER')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping(value = "/profile/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StudentProfileResponseDTO> uploadPhoto(
             Authentication authentication,

@@ -73,6 +73,7 @@ public class CourseController {
         return ResponseEntity.ok(courseService.getPopularCourses(userEmail));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/api/courses/my-learning")
     public ResponseEntity<MyCoursesSummaryDTO> getMyCoursesSummary(Authentication authentication) {
         return ResponseEntity.ok(courseService.getMyCoursesSummary(authentication.getName()));
@@ -142,14 +143,14 @@ public class CourseController {
         );
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/api/courses/{id}")
     public ResponseEntity<String> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return new ResponseEntity<>("Course id " + id + " has now deleted!!", HttpStatus.OK);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/api/courses/{id}")
     public ResponseEntity<CourseResponseDTO> updateCourse(
             @PathVariable Long id,

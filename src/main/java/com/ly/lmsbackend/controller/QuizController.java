@@ -30,8 +30,14 @@ public class QuizController {
     }
 
     @GetMapping("/api/lessons/{lessonId}/quiz")
-    public ResponseEntity<QuizDetailDTO> getQuizByLesson(@PathVariable Long lessonId) {
-        return new ResponseEntity<>(quizService.getQuizByLesson(lessonId), HttpStatus.OK);
+    public ResponseEntity<QuizDetailDTO> getQuizByLesson(
+            @PathVariable Long lessonId,
+            Authentication authentication
+    ) {
+        String email = authentication != null ? authentication.getName() : null;
+        boolean isAdminOrInstructor = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_INSTRUCTOR"));
+        return new ResponseEntity<>(quizService.getQuizByLesson(lessonId, email, isAdminOrInstructor), HttpStatus.OK);
     }
 
     @GetMapping("/api/quizzes/{id}/attempt/me")
@@ -51,13 +57,13 @@ public class QuizController {
         return ResponseEntity.ok(quizService.submitQuiz(id, dto, authentication.getName()));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/api/quizzes")
     public ResponseEntity<QuizResponseDTO> addQuiz(@Valid @RequestBody QuizCreateDTO dto){
         return new ResponseEntity<>(quizService.addQuiz(dto),HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/api/quizzes/{id}")
     public ResponseEntity<QuizResponseDTO> updateQuiz(
             @PathVariable Long id,
@@ -66,7 +72,7 @@ public class QuizController {
         return new ResponseEntity<>(quizService.updateQuiz(id,dto), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/api/quizzes/{id}")
     public ResponseEntity<String> deleteQuiz(@PathVariable Long id){
         quizService.deleteQuiz(id);

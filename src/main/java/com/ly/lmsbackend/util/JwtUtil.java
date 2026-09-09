@@ -31,6 +31,8 @@ public class JwtUtil {
     public String generateToken(Users user) {
         return Jwts.builder()
                 .setSubject(user.getEmail())
+                .setIssuer("lms-backend")
+                .setAudience("lms-api")
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
@@ -50,10 +52,18 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    public boolean validateToken(String email,UserDetails userDetails,String token) {
+    public boolean validateToken(String email, UserDetails userDetails, String token) {
         try {
-            getClaims(token);
-            return true;
+            Claims claims = getClaims(token);
+            String tokenEmail = claims.getSubject();
+            boolean isExpired = claims.getExpiration() != null && claims.getExpiration().before(new Date());
+            boolean validIssuer = claims.getIssuer() == null || "lms-backend".equals(claims.getIssuer());
+            return tokenEmail != null 
+                    && tokenEmail.equals(email) 
+                    && userDetails != null 
+                    && tokenEmail.equals(userDetails.getUsername()) 
+                    && !isExpired
+                    && validIssuer;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

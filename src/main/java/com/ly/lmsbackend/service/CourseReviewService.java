@@ -43,16 +43,9 @@ public class CourseReviewService {
 //    }
 
     public List<CourseReviewResponseDTO> getAllReviews() {
-        return courseReviewRepository.findAll().stream().map(cr->
-                new CourseReviewResponseDTO(
-                        cr.getReviewId(),
-                        cr.getReviewText(),
-                        cr.getRating(),
-                        cr.getUser().getUsername(),
-                        cr.getCourse().getTitle()
-                )
-
-        ).toList();
+        return courseReviewRepository.findAll().stream()
+                .map(courseReviewMapper::toDto)
+                .toList();
     }
 
     public CourseReviewResponseDTO addReviewByCourse(

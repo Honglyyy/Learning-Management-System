@@ -10,6 +10,7 @@ import com.ly.lmsbackend.mapper.LessonMapper;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Lessons;
 import com.ly.lmsbackend.model.Sections;
+import com.ly.lmsbackend.repository.LessonProgressRepository;
 import com.ly.lmsbackend.repository.LessonRepository;
 import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
@@ -29,14 +30,24 @@ public class LessonService {
     private final CourseRepository courseRepository;
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final LessonProgressRepository lessonProgressRepository;
 
-    public LessonService(LessonMapper lessonMapper, LessonRepository lessonRepository, SectionRepository sectionRepository, CourseRepository courseRepository, QuizRepository quizRepository, QuizAttemptRepository quizAttemptRepository) {
+    public LessonService(
+            LessonMapper lessonMapper,
+            LessonRepository lessonRepository,
+            SectionRepository sectionRepository,
+            CourseRepository courseRepository,
+            QuizRepository quizRepository,
+            QuizAttemptRepository quizAttemptRepository,
+            LessonProgressRepository lessonProgressRepository
+    ) {
         this.lessonRepository = lessonRepository;
         this.lessonMapper = lessonMapper;
         this.sectionRepository = sectionRepository;
         this.courseRepository = courseRepository;
         this.quizRepository = quizRepository;
         this.quizAttemptRepository = quizAttemptRepository;
+        this.lessonProgressRepository = lessonProgressRepository;
     }
 
     public List<LessonResponseDTO> getLessons() {
@@ -81,6 +92,7 @@ public class LessonService {
         Lessons lesson = lessonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lesson not found"));
 
+        lessonProgressRepository.deleteAllByLesson_LessonId(id);
         quizAttemptRepository.deleteAllByLessonId(id);
         lessonRepository.delete(lesson);
     }
@@ -95,12 +107,12 @@ public class LessonService {
                         quiz.getQuizId(),
                         quiz.getQuizTitle(),
                         quiz.getTotalPoint(),
-                        quiz.getQuestions().stream()
+                        quiz.getQuestions() == null ? List.of() : quiz.getQuestions().stream()
                                 .map(question -> new QuestionDetailDTO(
                                         question.getQuestionId(),
                                         question.getQuestionText(),
                                         question.getPoint(),
-                                        question.getAnswers().stream()
+                                        question.getAnswers() == null ? List.of() : question.getAnswers().stream()
                                                 .map(answer -> new AnswerDetailDTO(
                                                         answer.getAnswerId(),
                                                         answer.getAnswerText(),
@@ -208,6 +220,7 @@ public class LessonService {
             );
         }
 
+        lessonProgressRepository.deleteAllByLesson_LessonId(id);
         quizAttemptRepository.deleteAllByLessonId(id);
         lessonRepository.delete(lesson);
     }

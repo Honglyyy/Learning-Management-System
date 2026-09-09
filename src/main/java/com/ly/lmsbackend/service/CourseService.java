@@ -142,8 +142,17 @@ public class CourseService {
     }
 
     public CourseResponseDTO addCourse(CourseCreateDTO dto) {
-        Users instructor = userRepository.findById(dto.instructor())
-                .orElseThrow(() -> new RuntimeException("Instructor id " + dto.instructor() + " is not found!!"));
+        Users instructor = null;
+        if (dto.instructor() != null) {
+            instructor = userRepository.findById(dto.instructor()).orElse(null);
+        }
+        if (instructor == null && dto.instructorUsername() != null && !dto.instructorUsername().isBlank()) {
+            instructor = userRepository.findByUsername(dto.instructorUsername()).orElse(null);
+        }
+        if (instructor == null) {
+            String identifier = dto.instructor() != null ? "id " + dto.instructor() : dto.instructorUsername();
+            throw new RuntimeException("Instructor " + identifier + " is not found!!");
+        }
 
         List<Categories> categories = (dto.categoryId() != null && !dto.categoryId().isEmpty())
                 ? categoryRepository.findAllById(dto.categoryId())
@@ -179,10 +188,15 @@ public class CourseService {
         Courses existingCourse = courseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Course id " + id + " not found"));
 
+        Users newInstructor = null;
         if (dto.instructor() != null) {
-            Users instructor = userRepository.findById(dto.instructor())
-                    .orElseThrow(() -> new RuntimeException("Instructor not found"));
-            existingCourse.setInstructor(instructor);
+            newInstructor = userRepository.findById(dto.instructor()).orElse(null);
+        }
+        if (newInstructor == null && dto.instructorUsername() != null && !dto.instructorUsername().isBlank()) {
+            newInstructor = userRepository.findByUsername(dto.instructorUsername()).orElse(null);
+        }
+        if (newInstructor != null) {
+            existingCourse.setInstructor(newInstructor);
         }
 
         if (dto.categoryId() != null) {

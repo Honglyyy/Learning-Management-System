@@ -41,8 +41,7 @@ public class FileUploadService {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "text/plain",
             "application/zip",
-            "application/x-zip-compressed",
-            "application/octet-stream"
+            "application/x-zip-compressed"
     );
     private static final Set<String> MATERIAL_EXTENSIONS = Set.of("pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "zip");
     private static final Set<String> ASSIGNMENT_CONTENT_TYPES = Set.of(
@@ -61,7 +60,6 @@ public class FileUploadService {
             "application/x-zip-compressed",
             "application/x-rar-compressed",
             "application/x-7z-compressed",
-            "application/octet-stream",
             "image/jpeg",
             "image/png",
             "image/webp"

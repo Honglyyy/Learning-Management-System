@@ -87,12 +87,25 @@ public class UserController {
     }
 
     @PostMapping("/send-reset-otp")
-    public void sendResetOtp(@RequestParam String email) {
-        try{
-            userService.sendResetOtp(email);
+    public ResponseEntity<Map<String, Object>> sendResetOtp(
+            @RequestBody(required = false) Map<String, String> body,
+            @RequestParam(required = false) String email
+    ) {
+        String targetEmail = email;
+        if ((targetEmail == null || targetEmail.isBlank()) && body != null) {
+            targetEmail = body.get("email");
         }
-        catch(Exception e){
-            throw new RuntimeException("Failed to send reset otp");
+        if (targetEmail == null || targetEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+        }
+        try {
+            userService.sendResetOtp(targetEmail.trim());
+            return ResponseEntity.ok(Map.of(
+                    "message", "Reset code sent successfully",
+                    "timestamp", System.currentTimeMillis()
+            ));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 

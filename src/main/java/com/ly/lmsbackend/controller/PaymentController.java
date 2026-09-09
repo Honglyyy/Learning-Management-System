@@ -21,6 +21,7 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/api/payments/checkout")
     public ResponseEntity<PaymentResponseDTO> createCheckout(
             @Valid @RequestBody PaymentCheckoutRequestDTO dto,
@@ -32,6 +33,7 @@ public class PaymentController {
         );
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/api/payments/{id}/confirm")
     public ResponseEntity<PaymentResponseDTO> confirmPayment(
             @PathVariable Long id,
@@ -40,6 +42,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.confirmPayment(id, authentication.getName()));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/api/payments/me")
     public ResponseEntity<List<PaymentResponseDTO>> getMyPayments(Authentication authentication) {
         return ResponseEntity.ok(paymentService.getMyPayments(authentication.getName()));

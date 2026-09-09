@@ -7,10 +7,12 @@ import com.ly.lmsbackend.mapper.EnrollmentMapper;
 import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.EnrollmentStatus;
 import com.ly.lmsbackend.model.Enrollments;
+import com.ly.lmsbackend.model.PaymentStatus;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.EnrollmentRepository;
+import com.ly.lmsbackend.repository.PaymentRepository;
 import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -30,6 +33,7 @@ public class EnrollmentService {
     private final QuizAttemptRepository quizAttemptRepository;
     private final ActivityLogService activityLogService;
     private final NotificationService notificationService;
+    private final PaymentRepository paymentRepository;
 
     public EnrollmentService(
             EnrollmentRepository enrollmentRepository,
@@ -38,7 +42,19 @@ public class EnrollmentService {
             EnrollmentMapper enrollmentMapper,
             QuizAttemptRepository quizAttemptRepository
     ) {
-        this(enrollmentRepository, userRepository, courseRepository, enrollmentMapper, quizAttemptRepository, null, null);
+        this(enrollmentRepository, userRepository, courseRepository, enrollmentMapper, quizAttemptRepository, null, null, null);
+    }
+
+    public EnrollmentService(
+            EnrollmentRepository enrollmentRepository,
+            UserRepository userRepository,
+            CourseRepository courseRepository,
+            EnrollmentMapper enrollmentMapper,
+            QuizAttemptRepository quizAttemptRepository,
+            ActivityLogService activityLogService,
+            NotificationService notificationService
+    ) {
+        this(enrollmentRepository, userRepository, courseRepository, enrollmentMapper, quizAttemptRepository, activityLogService, notificationService, null);
     }
 
     @Autowired
@@ -49,7 +65,8 @@ public class EnrollmentService {
             EnrollmentMapper enrollmentMapper,
             QuizAttemptRepository quizAttemptRepository,
             ActivityLogService activityLogService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            PaymentRepository paymentRepository
     ) {
         this.enrollmentRepository = enrollmentRepository;
         this.userRepository = userRepository;
@@ -58,11 +75,23 @@ public class EnrollmentService {
         this.quizAttemptRepository = quizAttemptRepository;
         this.activityLogService = activityLogService;
         this.notificationService = notificationService;
+        this.paymentRepository = paymentRepository;
     }
 
     public EnrollmentResponseDTO enrollCurrentUser(EnrollmentCreateDTO dto, String email) {
         Users user = getUserByEmail(email);
         Courses course = getCourse(dto.courseId());
+
+        if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+            boolean hasPaid = paymentRepository != null && paymentRepository
+                    .findFirstByUser_EmailAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
+                            email, course.getCourseId(), PaymentStatus.PAID
+                    ).isPresent();
+
+            if (!hasPaid) {
+                throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Payment required to enroll in this course");
+            }
+        }
 
         Enrollments existingEnrollment = enrollmentRepository
                 .findByUser_IdAndCourse_CourseId(user.getId(), course.getCourseId())

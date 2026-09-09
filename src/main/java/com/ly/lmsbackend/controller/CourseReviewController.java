@@ -5,6 +5,7 @@ import com.ly.lmsbackend.dto.coursereviewdtos.CourseReviewResponseDTO;
 import com.ly.lmsbackend.service.CourseReviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class CourseReviewController {
         return ResponseEntity.ok(courseReviewService.getAllReviews());
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/api/courses/{courseId}/review")
     public ResponseEntity<CourseReviewResponseDTO> addReview(
             @PathVariable Long courseId,

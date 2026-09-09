@@ -15,8 +15,8 @@ public class CourseReviewMapper {
                 review.getReviewId(),
                 review.getReviewText(),
                 review.getRating(),
-                review.getUser().getUsername(),
-                review.getCourse().getTitle()
+                review.getUser() != null ? review.getUser().getUsername() : "Anonymous",
+                review.getCourse() != null ? review.getCourse().getTitle() : "Unknown Course"
         );
     }
 

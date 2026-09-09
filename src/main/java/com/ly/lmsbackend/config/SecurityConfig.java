@@ -46,7 +46,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/app/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .requestMatchers("/api/instructors/me", "/api/instructors/me/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/**", "/api/categories", "/api/categories/**", "/api/reviews", "/api/reviews/**", "/api/instructors", "/api/instructors/**", "/api/lessons/*/navigation", "/api/lessons/*/materials", "/api/certificates/verify/**", "/api/certificates/*/view", "/api/certificates/view/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/courses/my-learning", "/api/courses/instructor/**", "/api/courses/*/enrollments", "/api/courses/*/assignments").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/courses/search", "/api/courses/featured", "/api/courses/popular", "/api/courses/*", "/api/courses/*/reviews", "/api/categories", "/api/categories/**", "/api/reviews", "/api/reviews/**", "/api/instructors", "/api/instructors/**", "/api/lessons/*/navigation", "/api/lessons/*/materials", "/api/certificates/verify/**", "/api/certificates/*/view", "/api/certificates/view/**").permitAll()
                         .requestMatchers("/", "/health", "/actuator", "/actuator/**", "/acuator", "/acuator/**").permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
@@ -69,7 +70,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:[*]",
+                "http://127.0.0.1:[*]",
+                "https://*.pages.dev",
+                "https://*.netlify.app",
+                "https://*.lovable.app",
+                "https://*.onrender.com"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(false);

@@ -255,6 +255,26 @@ public class CourseService {
         Courses course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course id " + courseId + " not found"));
 
+        boolean hasCourseAccess = false;
+        if (userEmail != null && !userEmail.isBlank()) {
+            Users user = userRepository.findByEmail(userEmail).orElse(null);
+            if (user != null) {
+                if (user.getRole() == Roles.ADMIN) {
+                    hasCourseAccess = true;
+                } else if (user.getRole() == Roles.INSTRUCTOR) {
+                    if (course.getInstructor() != null && user.getEmail().equals(course.getInstructor().getEmail())) {
+                        hasCourseAccess = true;
+                    }
+                } else if (user.getRole() == Roles.STUDENT) {
+                    hasCourseAccess = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
+                            .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+                            .orElse(false);
+                }
+            }
+        }
+
+        final boolean finalHasCourseAccess = hasCourseAccess;
+
         List<SectionDetailDTO> sectionsDetail = sectionRepository.findByCourse_CourseId(courseId)
                 .stream()
                 .map(sections -> new SectionDetailDTO(
@@ -263,17 +283,20 @@ public class CourseService {
                         sections.getDuration(),
                         (long) (sections.getLessons() != null ? sections.getLessons().size() : 0),
                         (sections.getLessons() != null ? sections.getLessons().stream() : java.util.stream.Stream.<Lessons>empty())
-                                .map(lessons -> new LessonDetailDTO(
-                                        lessons.getLessonId(),
-                                        lessons.getTitle(),
-                                        lessons.getVideoUrl(),
-                                        lessons.getVideoPublicId(),
-                                        lessons.getDescription(),
-                                        lessons.getTextContent(),
-                                        lessons.getOrderIndex(),
-                                        lessons.getDuration(),
-                                        lessons.getIsFree() != null ? lessons.getIsFree() : false
-                                ))
+                                .map(lessons -> {
+                                    boolean canViewVideo = finalHasCourseAccess || Boolean.TRUE.equals(lessons.getIsFree());
+                                    return new LessonDetailDTO(
+                                            lessons.getLessonId(),
+                                            lessons.getTitle(),
+                                            canViewVideo ? lessons.getVideoUrl() : null,
+                                            canViewVideo ? lessons.getVideoPublicId() : null,
+                                            lessons.getDescription(),
+                                            lessons.getTextContent(),
+                                            lessons.getOrderIndex(),
+                                            lessons.getDuration(),
+                                            lessons.getIsFree() != null ? lessons.getIsFree() : false
+                                    );
+                                })
                                 .toList()
                 ))
                 .toList();

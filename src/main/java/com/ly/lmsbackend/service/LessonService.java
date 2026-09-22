@@ -16,6 +16,13 @@ import com.ly.lmsbackend.repository.QuizAttemptRepository;
 import com.ly.lmsbackend.repository.QuizRepository;
 import com.ly.lmsbackend.repository.SectionRepository;
 import com.ly.lmsbackend.repository.CourseRepository;
+import com.ly.lmsbackend.repository.UserRepository;
+import com.ly.lmsbackend.repository.EnrollmentRepository;
+import com.ly.lmsbackend.model.Roles;
+import com.ly.lmsbackend.model.Users;
+import com.ly.lmsbackend.model.EnrollmentStatus;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +38,8 @@ public class LessonService {
     private final QuizRepository quizRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final LessonProgressRepository lessonProgressRepository;
+    private final UserRepository userRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     public LessonService(
             LessonMapper lessonMapper,
@@ -39,7 +48,9 @@ public class LessonService {
             CourseRepository courseRepository,
             QuizRepository quizRepository,
             QuizAttemptRepository quizAttemptRepository,
-            LessonProgressRepository lessonProgressRepository
+            LessonProgressRepository lessonProgressRepository,
+            UserRepository userRepository,
+            EnrollmentRepository enrollmentRepository
     ) {
         this.lessonRepository = lessonRepository;
         this.lessonMapper = lessonMapper;
@@ -48,6 +59,8 @@ public class LessonService {
         this.quizRepository = quizRepository;
         this.quizAttemptRepository = quizAttemptRepository;
         this.lessonProgressRepository = lessonProgressRepository;
+        this.userRepository = userRepository;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     public List<LessonResponseDTO> getLessons() {
@@ -97,9 +110,44 @@ public class LessonService {
         lessonRepository.delete(lesson);
     }
 
-    public LessonQuizDTO getLesson(Long lessonId){
+    public LessonQuizDTO getLesson(Long lessonId) {
+        return getLesson(lessonId, null);
+    }
+
+    public LessonQuizDTO getLesson(Long lessonId, String userEmail) {
         Lessons lessons = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new RuntimeException("Lesson not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found"));
+
+        if (!Boolean.TRUE.equals(lessons.getIsFree())) {
+            if (userEmail == null || userEmail.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Please log in to access this lesson");
+            }
+            Users user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+            Long courseId = (lessons.getSection() != null && lessons.getSection().getCourse() != null)
+                    ? lessons.getSection().getCourse().getCourseId()
+                    : null;
+
+            if (user.getRole() == Roles.STUDENT) {
+                if (courseId == null) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Course not found for this lesson");
+                }
+                boolean isEnrolled = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
+                        .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+                        .orElse(false);
+                if (!isEnrolled) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Enrollment required to access this lesson");
+                }
+            } else if (user.getRole() == Roles.INSTRUCTOR) {
+                if (courseId != null) {
+                    Courses course = courseRepository.findById(courseId).orElse(null);
+                    if (course != null && course.getInstructor() != null && !user.getEmail().equals(course.getInstructor().getEmail())) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to instructor of another course");
+                    }
+                }
+            }
+        }
 
         List<QuizDetailDTO> quizzes = quizRepository.findByLesson_LessonId(lessonId)
                 .stream()

@@ -29,8 +29,12 @@ public class LessonController {
     }
 
     @GetMapping("/api/lessons/{id}")
-    public ResponseEntity<LessonQuizDTO> getLesson(@PathVariable Long id){
-        return new ResponseEntity<>(lessonService.getLesson(id), HttpStatus.OK);
+    public ResponseEntity<LessonQuizDTO> getLesson(
+            @PathVariable Long id,
+            Authentication authentication
+    ){
+        String userEmail = authentication != null ? authentication.getName() : null;
+        return new ResponseEntity<>(lessonService.getLesson(id, userEmail), HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

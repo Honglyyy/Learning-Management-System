@@ -135,11 +135,40 @@ public class LessonProgressService {
         Lessons currentLesson = getLesson(lessonId);
         Long courseId = getCourseIdForLesson(currentLesson);
 
-        // If student and lesson is not free, verify enrollment
-        Users user = userRepository.findByEmail(userEmail).orElse(null);
-        if (user != null && user.getRole() == Roles.STUDENT && !Boolean.TRUE.equals(currentLesson.getIsFree())) {
-            Students student = getStudentByEmail(userEmail);
-            verifyStudentEnrolledInCourse(student, courseId);
+        Users user = (userEmail != null && !userEmail.isBlank())
+                ? userRepository.findByEmail(userEmail).orElse(null)
+                : null;
+
+        // If lesson is not free, verify user authentication and access
+        if (!Boolean.TRUE.equals(currentLesson.getIsFree())) {
+            if (user == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Please log in to access this lesson");
+            }
+            if (user.getRole() == Roles.STUDENT) {
+                Students student = getStudentByEmail(userEmail);
+                verifyStudentEnrolledInCourse(student, courseId);
+            } else if (user.getRole() == Roles.INSTRUCTOR) {
+                Courses course = courseRepository.findById(courseId).orElse(null);
+                if (course != null && course.getInstructor() != null && !user.getEmail().equals(course.getInstructor().getEmail())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to instructor of another course");
+                }
+            }
+        }
+
+        boolean hasCourseAccess = false;
+        if (user != null) {
+            if (user.getRole() == Roles.ADMIN) {
+                hasCourseAccess = true;
+            } else if (user.getRole() == Roles.INSTRUCTOR) {
+                Courses course = courseRepository.findById(courseId).orElse(null);
+                if (course != null && course.getInstructor() != null && user.getEmail().equals(course.getInstructor().getEmail())) {
+                    hasCourseAccess = true;
+                }
+            } else if (user.getRole() == Roles.STUDENT) {
+                hasCourseAccess = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
+                        .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+                        .orElse(false);
+            }
         }
 
         List<Lessons> courseLessons = lessonRepository
@@ -157,8 +186,18 @@ public class LessonProgressService {
             return new LessonNavigationDTO(lessonId, null, null, false, false);
         }
 
-        Long previousLessonId = (currentIndex > 0) ? courseLessons.get(currentIndex - 1).getLessonId() : null;
-        Long nextLessonId = (currentIndex < courseLessons.size() - 1) ? courseLessons.get(currentIndex + 1).getLessonId() : null;
+        Lessons prevLesson = (currentIndex > 0) ? courseLessons.get(currentIndex - 1) : null;
+        Lessons nextLesson = (currentIndex < courseLessons.size() - 1) ? courseLessons.get(currentIndex + 1) : null;
+
+        Long previousLessonId = null;
+        if (prevLesson != null && (hasCourseAccess || Boolean.TRUE.equals(prevLesson.getIsFree()))) {
+            previousLessonId = prevLesson.getLessonId();
+        }
+
+        Long nextLessonId = null;
+        if (nextLesson != null && (hasCourseAccess || Boolean.TRUE.equals(nextLesson.getIsFree()))) {
+            nextLessonId = nextLesson.getLessonId();
+        }
 
         return new LessonNavigationDTO(
                 lessonId,

@@ -32,7 +32,10 @@ public class PaymentMapper {
                 payment.getStatus(),
                 payment.getCreatedAt(),
                 payment.getUpdatedAt(),
-                paymentUrl
+                paymentUrl,
+                payment.getOriginalAmount() != null ? payment.getOriginalAmount() : payment.getAmount(),
+                payment.getDiscountAmount() != null ? payment.getDiscountAmount() : BigDecimal.ZERO,
+                payment.getIsReEnrollmentDiscount() != null ? payment.getIsReEnrollmentDiscount() : false
         );
     }
 

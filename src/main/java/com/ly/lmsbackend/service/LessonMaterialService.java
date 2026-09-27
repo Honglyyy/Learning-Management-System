@@ -165,12 +165,15 @@ public class LessonMaterialService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account not linked to student");
         }
 
-        boolean isEnrolled = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
-                .map(enrollment -> enrollment.getStatus() == EnrollmentStatus.ACTIVE)
-                .orElse(false);
+        Enrollments enrollment = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
+                .orElse(null);
 
-        if (!isEnrolled) {
+        if (enrollment == null || enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: student is not actively enrolled in this course");
+        }
+
+        if (enrollment.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: course enrollment has expired. Please renew your access.");
         }
     }
 

@@ -101,6 +101,28 @@ public class QuizService {
                         "Quiz for lesson id " + lessonId + " is not found"
                 ));
 
+        if (!isAdminOrInstructor) {
+            Lessons lesson = quiz.getLesson();
+            if (lesson != null && !Boolean.TRUE.equals(lesson.getIsFree())) {
+                if (email == null || email.isBlank()) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required to access this quiz");
+                }
+                Long courseId = (lesson.getSection() != null && lesson.getSection().getCourse() != null)
+                        ? lesson.getSection().getCourse().getCourseId()
+                        : null;
+                if (courseId != null) {
+                    Enrollments enrollment = enrollmentRepository.findByUser_EmailAndCourse_CourseId(email, courseId)
+                            .orElse(null);
+                    if (enrollment == null || enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Enrollment required to access this quiz");
+                    }
+                    if (enrollment.isExpired()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Course access has expired. Please renew your access.");
+                    }
+                }
+            }
+        }
+
         boolean revealAnswers = isAdminOrInstructor;
         if (!revealAnswers && email != null) {
             revealAnswers = quizAttemptRepository.findByUser_EmailAndQuiz_QuizId(email, quiz.getQuizId()).isPresent();
@@ -149,6 +171,9 @@ public class QuizService {
 
         if (enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your enrollment is not active");
+        }
+        if (enrollment.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Course access has expired. Please renew your access.");
         }
 
         Set<Long> selectedAnswerIds = new HashSet<>(dto.answerIds() == null ? List.of() : dto.answerIds());

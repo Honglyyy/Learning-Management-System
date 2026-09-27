@@ -50,11 +50,25 @@ public class DatabaseSchemaMigration implements ApplicationRunner {
         applySql("ALTER TABLE IF EXISTS students ADD COLUMN IF NOT EXISTS total_points DOUBLE PRECISION DEFAULT 0.0");
         applySql("UPDATE students SET total_points = 0.0 WHERE total_points IS NULL");
 
-        // Ensure enrollment points columns exist
+        // Course expiration: ensure course access duration column exists (default 180 days = ~6 months)
+        applySql("ALTER TABLE IF EXISTS courses ADD COLUMN IF NOT EXISTS access_duration_days INTEGER DEFAULT 180");
+        applySql("UPDATE courses SET access_duration_days = 180 WHERE access_duration_days IS NULL");
+
+        // Course expiration: ensure enrollment expiration date and points columns exist
+        applySql("ALTER TABLE IF EXISTS enrollments ADD COLUMN IF NOT EXISTS expiration_date TIMESTAMP WITHOUT TIME ZONE");
+        applySql("UPDATE enrollments SET expiration_date = COALESCE(enrolled_at, CURRENT_TIMESTAMP) + INTERVAL '180 days' WHERE expiration_date IS NULL");
         applySql("ALTER TABLE IF EXISTS enrollments ADD COLUMN IF NOT EXISTS earned_points DOUBLE PRECISION DEFAULT 0.0");
         applySql("ALTER TABLE IF EXISTS enrollments ADD COLUMN IF NOT EXISTS total_points DOUBLE PRECISION DEFAULT 0.0");
         applySql("UPDATE enrollments SET earned_points = 0.0 WHERE earned_points IS NULL");
         applySql("UPDATE enrollments SET total_points = 0.0 WHERE total_points IS NULL");
+
+        // Re-enrollment discount: ensure payment discount columns exist
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS original_amount NUMERIC(19, 2)");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(19, 2) DEFAULT 0.00");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS is_re_enrollment_discount BOOLEAN DEFAULT FALSE");
+        applySql("UPDATE payments SET original_amount = amount WHERE original_amount IS NULL");
+        applySql("UPDATE payments SET discount_amount = 0.00 WHERE discount_amount IS NULL");
+        applySql("UPDATE payments SET is_re_enrollment_discount = FALSE WHERE is_re_enrollment_discount IS NULL");
 
         // Ensure certificates table exists
         applySql("""

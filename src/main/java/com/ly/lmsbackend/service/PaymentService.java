@@ -1,15 +1,18 @@
 package com.ly.lmsbackend.service;
 
 import com.ly.lmsbackend.dto.enrollmentdtos.EnrollmentCreateDTO;
+import com.ly.lmsbackend.dto.paymentdtos.CheckoutQuoteDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentCheckoutRequestDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentResponseDTO;
 import com.ly.lmsbackend.mapper.PaymentMapper;
 import com.ly.lmsbackend.model.Courses;
+import com.ly.lmsbackend.model.Enrollments;
 import com.ly.lmsbackend.model.PaymentStatus;
 import com.ly.lmsbackend.model.Payments;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
+import com.ly.lmsbackend.repository.EnrollmentRepository;
 import com.ly.lmsbackend.repository.PaymentRepository;
 import com.ly.lmsbackend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,6 +35,7 @@ public class PaymentService {
     private final PaymentMapper paymentMapper;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Autowired
     public PaymentService(
@@ -39,7 +45,8 @@ public class PaymentService {
             EnrollmentService enrollmentService,
             PaymentMapper paymentMapper,
             EmailService emailService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            EnrollmentRepository enrollmentRepository
     ) {
         this.paymentRepository = paymentRepository;
         this.courseRepository = courseRepository;
@@ -48,6 +55,19 @@ public class PaymentService {
         this.paymentMapper = paymentMapper;
         this.emailService = emailService;
         this.notificationService = notificationService;
+        this.enrollmentRepository = enrollmentRepository;
+    }
+
+    public PaymentService(
+            PaymentRepository paymentRepository,
+            CourseRepository courseRepository,
+            UserRepository userRepository,
+            EnrollmentService enrollmentService,
+            PaymentMapper paymentMapper,
+            EmailService emailService,
+            NotificationService notificationService
+    ) {
+        this(paymentRepository, courseRepository, userRepository, enrollmentService, paymentMapper, emailService, notificationService, null);
     }
 
     public PaymentService(
@@ -57,7 +77,7 @@ public class PaymentService {
             EnrollmentService enrollmentService,
             PaymentMapper paymentMapper
     ) {
-        this(paymentRepository, courseRepository, userRepository, enrollmentService, paymentMapper, null, null);
+        this(paymentRepository, courseRepository, userRepository, enrollmentService, paymentMapper, null, null, null);
     }
 
     public PaymentResponseDTO createCheckout(PaymentCheckoutRequestDTO dto, String email) {
@@ -65,15 +85,74 @@ public class PaymentService {
         Courses course = courseRepository.findById(dto.courseId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
 
+        BigDecimal basePrice = course.getPrice() == null ? BigDecimal.ZERO : course.getPrice();
+        BigDecimal finalAmount = basePrice;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        boolean hasReEnrollmentDiscount = false;
+
+        if (enrollmentRepository != null) {
+            Optional<Enrollments> existingEnrollmentOpt = enrollmentRepository
+                    .findByUser_IdAndCourse_CourseId(user.getId(), course.getCourseId());
+
+            if (existingEnrollmentOpt.isPresent() && existingEnrollmentOpt.get().isExpired()) {
+                hasReEnrollmentDiscount = true;
+                discountAmount = basePrice.multiply(BigDecimal.valueOf(0.5)).setScale(2, RoundingMode.HALF_UP);
+                finalAmount = basePrice.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
         Payments payment = new Payments();
         payment.setUser(user);
         payment.setCourse(course);
-        payment.setAmount(course.getPrice() == null ? BigDecimal.ZERO : course.getPrice());
+        payment.setAmount(finalAmount);
+        payment.setOriginalAmount(basePrice);
+        payment.setDiscountAmount(discountAmount);
+        payment.setIsReEnrollmentDiscount(hasReEnrollmentDiscount);
         payment.setProvider(dto.provider() == null || dto.provider().isBlank() ? "ABA_PAYWAY" : dto.provider());
         payment.setProviderReference("aba_" + UUID.randomUUID().toString().substring(0, 8));
         payment.setStatus(PaymentStatus.PENDING);
 
         return paymentMapper.toDTO(paymentRepository.save(payment));
+    }
+
+    public CheckoutQuoteDTO calculateCheckoutQuote(Long courseId, String email) {
+        Users user = getUser(email);
+        Courses course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+
+        BigDecimal basePrice = course.getPrice() == null ? BigDecimal.ZERO : course.getPrice();
+        BigDecimal finalPrice = basePrice;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        boolean hasReEnrollmentDiscount = false;
+        Double discountPercentage = 0.0;
+        boolean isExpired = false;
+
+        if (enrollmentRepository != null) {
+            Optional<Enrollments> existingEnrollmentOpt = enrollmentRepository
+                    .findByUser_IdAndCourse_CourseId(user.getId(), course.getCourseId());
+
+            if (existingEnrollmentOpt.isPresent() && existingEnrollmentOpt.get().isExpired()) {
+                isExpired = true;
+                if (basePrice.compareTo(BigDecimal.ZERO) > 0) {
+                    hasReEnrollmentDiscount = true;
+                    discountPercentage = 50.0;
+                    discountAmount = basePrice.multiply(BigDecimal.valueOf(0.5)).setScale(2, RoundingMode.HALF_UP);
+                    finalPrice = basePrice.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
+                }
+            }
+        }
+
+        return new CheckoutQuoteDTO(
+                course.getCourseId(),
+                course.getTitle(),
+                basePrice,
+                finalPrice,
+                discountAmount,
+                discountPercentage,
+                hasReEnrollmentDiscount,
+                course.getAccessDurationDays(),
+                isExpired
+        );
     }
 
     public PaymentResponseDTO confirmPayment(Long paymentId, String email) {

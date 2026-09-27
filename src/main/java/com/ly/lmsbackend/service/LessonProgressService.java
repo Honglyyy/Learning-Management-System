@@ -164,9 +164,9 @@ public class LessonProgressService {
                 if (course != null && course.getInstructor() != null && user.getEmail().equals(course.getInstructor().getEmail())) {
                     hasCourseAccess = true;
                 }
-            } else if (user.getRole() == Roles.STUDENT) {
+            } else if (user.getRole() == Roles.STUDENT || user.getRole() == Roles.USER) {
                 hasCourseAccess = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
-                        .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+                        .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE && !e.isExpired())
                         .orElse(false);
             }
         }
@@ -254,7 +254,7 @@ public class LessonProgressService {
         // For Student, verify enrollment and compute COMPLETED / INCOMPLETE / LOCKED
         Students student = getStudentByEmail(userEmail);
         boolean isEnrolled = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
-                .map(enrollment -> enrollment.getStatus() == EnrollmentStatus.ACTIVE)
+                .map(enrollment -> enrollment.getStatus() == EnrollmentStatus.ACTIVE && !enrollment.isExpired())
                 .orElse(false);
 
         if (!isEnrolled) {
@@ -339,12 +339,15 @@ public class LessonProgressService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User account not linked to student");
         }
 
-        boolean isEnrolled = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
-                .map(enrollment -> enrollment.getStatus() == EnrollmentStatus.ACTIVE)
-                .orElse(false);
+        Enrollments enrollment = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
+                .orElse(null);
 
-        if (!isEnrolled) {
+        if (enrollment == null || enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: student is not actively enrolled in this course");
+        }
+
+        if (enrollment.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: course enrollment has expired. Please renew your access.");
         }
     }
 

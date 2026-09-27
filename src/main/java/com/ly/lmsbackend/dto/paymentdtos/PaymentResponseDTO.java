@@ -18,7 +18,10 @@ public record PaymentResponseDTO(
         PaymentStatus status,
         Timestamp createdAt,
         Timestamp updatedAt,
-        String paymentUrl
+        String paymentUrl,
+        BigDecimal originalAmount,
+        BigDecimal discountAmount,
+        Boolean isReEnrollmentDiscount
 ) {
     public PaymentResponseDTO(
             Long paymentId,
@@ -34,6 +37,24 @@ public record PaymentResponseDTO(
             Timestamp createdAt,
             Timestamp updatedAt
     ) {
-        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, null);
+        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, null, amount, BigDecimal.ZERO, false);
+    }
+
+    public PaymentResponseDTO(
+            Long paymentId,
+            Long userId,
+            String username,
+            String userEmail,
+            Long courseId,
+            String courseTitle,
+            BigDecimal amount,
+            String provider,
+            String providerReference,
+            PaymentStatus status,
+            Timestamp createdAt,
+            Timestamp updatedAt,
+            String paymentUrl
+    ) {
+        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, paymentUrl, amount, BigDecimal.ZERO, false);
     }
 }

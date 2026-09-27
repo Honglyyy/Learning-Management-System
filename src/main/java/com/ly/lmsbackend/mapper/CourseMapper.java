@@ -41,6 +41,7 @@ public class CourseMapper {
         course.setStatus(dto.status() != null ? dto.status() : CourseStatus.PUBLISHED);
         course.setLearningOutcomes(dto.learningOutcomes());
         course.setRequirements(dto.requirements());
+        course.setAccessDurationDays(dto.accessDurationDays() != null && dto.accessDurationDays() > 0 ? dto.accessDurationDays() : 180);
 
         return course;
     }
@@ -95,7 +96,8 @@ public class CourseMapper {
                 course.getStatus() != null ? course.getStatus() : CourseStatus.PUBLISHED,
                 lessonCount,
                 enrollmentCount,
-                isFavorite != null ? isFavorite : false
+                isFavorite != null ? isFavorite : false,
+                course.getAccessDurationDays()
         );
     }
 }

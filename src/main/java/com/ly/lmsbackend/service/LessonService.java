@@ -21,6 +21,7 @@ import com.ly.lmsbackend.repository.EnrollmentRepository;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.model.EnrollmentStatus;
+import com.ly.lmsbackend.model.Enrollments;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.AccessDeniedException;
@@ -150,15 +151,17 @@ public class LessonService {
                     ? lessons.getSection().getCourse().getCourseId()
                     : null;
 
-            if (user.getRole() == Roles.STUDENT) {
+            if (user.getRole() == Roles.STUDENT || user.getRole() == Roles.USER) {
                 if (courseId == null) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Course not found for this lesson");
                 }
-                boolean isEnrolled = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
-                        .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
-                        .orElse(false);
-                if (!isEnrolled) {
+                Enrollments enrollment = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
+                        .orElse(null);
+                if (enrollment == null || enrollment.getStatus() != EnrollmentStatus.ACTIVE) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Enrollment required to access this lesson");
+                }
+                if (enrollment.isExpired()) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Course access has expired. Please renew your access.");
                 }
             } else if (user.getRole() == Roles.INSTRUCTOR) {
                 if (courseId != null) {

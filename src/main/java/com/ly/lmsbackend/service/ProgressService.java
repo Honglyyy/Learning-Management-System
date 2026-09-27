@@ -68,6 +68,10 @@ public class ProgressService {
         Enrollments enrollment = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not enrolled in this course"));
 
+        if (enrollment.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Course access has expired. Please renew your access.");
+        }
+
         // Recalculate and update points
         studentPointsService.recalculateCourseAndStudentPoints(user, course, enrollment);
 
@@ -191,11 +195,15 @@ public class ProgressService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No enrolled courses found for student");
         }
 
-        // Find most recently updated active/completed enrollment
+        // Find most recently updated active/completed non-expired enrollment
         Enrollments currentEnrollment = enrollments.stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE || e.getStatus() == EnrollmentStatus.COMPLETED)
+                .filter(e -> (e.getStatus() == EnrollmentStatus.ACTIVE || e.getStatus() == EnrollmentStatus.COMPLETED) && !e.isExpired())
                 .max(Comparator.comparing(e -> e.getUpdatedAt() != null ? e.getUpdatedAt() : e.getEnrolledAt()))
-                .orElse(enrollments.get(0));
+                .orElse(null);
+
+        if (currentEnrollment == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No active enrolled courses found for student");
+        }
 
         Courses course = currentEnrollment.getCourse();
         List<Lessons> lessons = lessonRepository

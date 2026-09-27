@@ -34,6 +34,15 @@ public class Payments {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(name = "original_amount")
+    private BigDecimal originalAmount;
+
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "is_re_enrollment_discount")
+    private Boolean isReEnrollmentDiscount = false;
+
     @Column(nullable = false)
     private String provider;
 

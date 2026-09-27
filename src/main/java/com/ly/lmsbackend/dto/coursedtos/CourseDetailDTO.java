@@ -27,7 +27,13 @@ public record CourseDetailDTO(
         String learningOutcomes,
         String requirements,
         Long enrollmentCount,
-        Boolean isFavorite
+        Boolean isFavorite,
+        Integer accessDurationDays,
+        Boolean isEnrolled,
+        Boolean isExpired,
+        java.sql.Timestamp expirationDate,
+        Boolean hasReEnrollmentDiscount,
+        BigDecimal discountedPrice
 ) {
     public CourseDetailDTO(
             Long courseId,
@@ -46,7 +52,35 @@ public record CourseDetailDTO(
     ) {
         this(courseId, title, description, price, overallDuration, coverUrl, coverPublicId,
                 instructor, sectionCount, rating, categories, sections, reviews,
-                CourseLevel.ALL_LEVELS, CourseStatus.PUBLISHED, null, null, 0L, false);
+                CourseLevel.ALL_LEVELS, CourseStatus.PUBLISHED, null, null, 0L, false,
+                180, false, false, null, false, null);
+    }
+
+    public CourseDetailDTO(
+            Long courseId,
+            String title,
+            String description,
+            BigDecimal price,
+            String overallDuration,
+            String coverUrl,
+            String coverPublicId,
+            String instructor,
+            Long sectionCount,
+            Double rating,
+            List<String> categories,
+            List<SectionDetailDTO> sections,
+            List<CourseReviewResponseDTO> reviews,
+            CourseLevel level,
+            CourseStatus status,
+            String learningOutcomes,
+            String requirements,
+            Long enrollmentCount,
+            Boolean isFavorite
+    ) {
+        this(courseId, title, description, price, overallDuration, coverUrl, coverPublicId,
+                instructor, sectionCount, rating, categories, sections, reviews,
+                level, status, learningOutcomes, requirements, enrollmentCount, isFavorite,
+                180, false, false, null, false, null);
     }
 }
 

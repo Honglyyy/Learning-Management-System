@@ -48,6 +48,9 @@ public class Courses {
 
     private BigDecimal price;
 
+    @Column(name = "access_duration_days")
+    private Integer accessDurationDays = 180;
+
     @CreatedBy
     private String createdBy;
 
@@ -110,6 +113,10 @@ public class Courses {
         return status != null ? status : CourseStatus.PUBLISHED;
     }
 
+    public Integer getAccessDurationDays() {
+        return accessDurationDays != null && accessDurationDays > 0 ? accessDurationDays : 180;
+    }
+
     @PrePersist
     @PreUpdate
     public void ensureStage4Defaults() {
@@ -118,6 +125,9 @@ public class Courses {
         }
         if (this.status == null) {
             this.status = CourseStatus.PUBLISHED;
+        }
+        if (this.accessDurationDays == null || this.accessDurationDays <= 0) {
+            this.accessDurationDays = 180;
         }
     }
 }

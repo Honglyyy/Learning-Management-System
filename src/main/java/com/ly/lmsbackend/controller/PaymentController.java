@@ -1,5 +1,6 @@
 package com.ly.lmsbackend.controller;
 
+import com.ly.lmsbackend.dto.paymentdtos.CheckoutQuoteDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentCheckoutRequestDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentResponseDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentStatusUpdateDTO;
@@ -19,6 +20,15 @@ public class PaymentController {
 
     public PaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/api/payments/checkout/quote")
+    public ResponseEntity<CheckoutQuoteDTO> getCheckoutQuote(
+            @RequestParam Long courseId,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(paymentService.calculateCheckoutQuote(courseId, authentication.getName()));
     }
 
     @PreAuthorize("isAuthenticated()")

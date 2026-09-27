@@ -43,10 +43,24 @@ public class Enrollments {
     @Column(name = "total_points")
     private Double totalPoints = 0.0;
 
+    @Column(name = "expiration_date")
+    private Timestamp expirationDate;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Timestamp enrolledAt;
 
     @UpdateTimestamp
     private Timestamp updatedAt;
+
+    public boolean isExpired() {
+        if (this.status == EnrollmentStatus.EXPIRED) {
+            return true;
+        }
+        return this.expirationDate != null && this.expirationDate.before(new Timestamp(System.currentTimeMillis()));
+    }
+
+    public boolean isActive() {
+        return this.status == EnrollmentStatus.ACTIVE && !isExpired();
+    }
 }

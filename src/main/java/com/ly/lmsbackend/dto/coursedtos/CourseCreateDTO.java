@@ -34,7 +34,8 @@ public record CourseCreateDTO(
         CourseLevel level,
         CourseStatus status,
         String learningOutcomes,
-        String requirements
+        String requirements,
+        Integer accessDurationDays
 ) {
     @JsonCreator
     public static CourseCreateDTO fromJson(
@@ -52,7 +53,8 @@ public record CourseCreateDTO(
             @JsonProperty("level") CourseLevel level,
             @JsonProperty("status") CourseStatus status,
             @JsonProperty("learningOutcomes") String learningOutcomes,
-            @JsonProperty("requirements") String requirements
+            @JsonProperty("requirements") String requirements,
+            @JsonProperty("accessDurationDays") Integer accessDurationDays
     ) {
         Long resolvedInstructor = instructorId;
         String resolvedInstructorUsername = instructorUsername;
@@ -82,6 +84,8 @@ public record CourseCreateDTO(
                 ? categoryId
                 : categoryIds;
 
+        int durationDays = (accessDurationDays != null && accessDurationDays > 0) ? accessDurationDays : 180;
+
         return new CourseCreateDTO(
                 title,
                 description,
@@ -95,7 +99,8 @@ public record CourseCreateDTO(
                 level != null ? level : CourseLevel.ALL_LEVELS,
                 status != null ? status : CourseStatus.PUBLISHED,
                 learningOutcomes,
-                requirements
+                requirements,
+                durationDays
         );
     }
 
@@ -110,7 +115,7 @@ public record CourseCreateDTO(
             List<Long> categoryId
     ) {
         this(title, description, price, overallDuration, coverUrl, coverPublicId, instructor, null, categoryId,
-                CourseLevel.ALL_LEVELS, CourseStatus.PUBLISHED, null, null);
+                CourseLevel.ALL_LEVELS, CourseStatus.PUBLISHED, null, null, 180);
     }
 
     public CourseCreateDTO(
@@ -128,7 +133,26 @@ public record CourseCreateDTO(
             String requirements
     ) {
         this(title, description, price, overallDuration, coverUrl, coverPublicId, instructor, null, categoryId,
-                level, status, learningOutcomes, requirements);
+                level, status, learningOutcomes, requirements, 180);
+    }
+
+    public CourseCreateDTO(
+            String title,
+            String description,
+            BigDecimal price,
+            String overallDuration,
+            String coverUrl,
+            String coverPublicId,
+            Long instructor,
+            String instructorUsername,
+            List<Long> categoryId,
+            CourseLevel level,
+            CourseStatus status,
+            String learningOutcomes,
+            String requirements
+    ) {
+        this(title, description, price, overallDuration, coverUrl, coverPublicId, instructor, instructorUsername, categoryId,
+                level, status, learningOutcomes, requirements, 180);
     }
 }
 

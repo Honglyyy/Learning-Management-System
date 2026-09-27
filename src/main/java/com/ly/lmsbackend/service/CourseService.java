@@ -250,6 +250,9 @@ public class CourseService {
         if (dto.requirements() != null) {
             existingCourse.setRequirements(dto.requirements());
         }
+        if (dto.accessDurationDays() != null && dto.accessDurationDays() > 0) {
+            existingCourse.setAccessDurationDays(dto.accessDurationDays());
+        }
 
         organizeCourseCover(existingCourse);
         return courseMapper.toDTO(courseRepository.save(existingCourse));
@@ -284,6 +287,12 @@ public class CourseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course id " + courseId + " not found"));
 
         boolean hasCourseAccess = false;
+        boolean isEnrolled = false;
+        boolean isExpired = false;
+        java.sql.Timestamp expirationDate = null;
+        boolean hasReEnrollmentDiscount = false;
+        BigDecimal discountedPrice = null;
+
         if (userEmail != null && !userEmail.isBlank()) {
             Users user = userRepository.findByEmail(userEmail).orElse(null);
             if (user != null) {
@@ -293,10 +302,20 @@ public class CourseService {
                     if (course.getInstructor() != null && user.getEmail().equals(course.getInstructor().getEmail())) {
                         hasCourseAccess = true;
                     }
-                } else if (user.getRole() == Roles.STUDENT) {
-                    hasCourseAccess = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId)
-                            .map(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
-                            .orElse(false);
+                } else if (user.getRole() == Roles.STUDENT || user.getRole() == Roles.USER) {
+                    Optional<Enrollments> enrollmentOpt = enrollmentRepository.findByUser_IdAndCourse_CourseId(user.getId(), courseId);
+                    if (enrollmentOpt.isPresent()) {
+                        Enrollments enrollment = enrollmentOpt.get();
+                        isEnrolled = true;
+                        isExpired = enrollment.isExpired();
+                        expirationDate = enrollment.getExpirationDate();
+                        hasCourseAccess = enrollment.getStatus() == EnrollmentStatus.ACTIVE && !isExpired;
+
+                        if (isExpired && course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            hasReEnrollmentDiscount = true;
+                            discountedPrice = course.getPrice().multiply(BigDecimal.valueOf(0.5)).setScale(2, java.math.RoundingMode.HALF_UP);
+                        }
+                    }
                 }
             }
         }
@@ -377,7 +396,13 @@ public class CourseService {
                 course.getLearningOutcomes(),
                 course.getRequirements(),
                 enrollmentCount,
-                isFavorite
+                isFavorite,
+                course.getAccessDurationDays(),
+                isEnrolled,
+                isExpired,
+                expirationDate,
+                hasReEnrollmentDiscount,
+                discountedPrice
         );
     }
 
@@ -435,6 +460,9 @@ public class CourseService {
         if (dto.requirements() != null) {
             course.setRequirements(dto.requirements());
         }
+        if (dto.accessDurationDays() != null && dto.accessDurationDays() > 0) {
+            course.setAccessDurationDays(dto.accessDurationDays());
+        }
 
         organizeCourseCover(course);
         Courses updated = courseRepository.save(course);
@@ -458,12 +486,17 @@ public class CourseService {
         List<Enrollments> enrollments = enrollmentRepository.findByUser_Email(userEmail);
 
         List<CourseResponseDTO> inProgress = enrollments.stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE)
+                .filter(e -> e.getStatus() == EnrollmentStatus.ACTIVE && !e.isExpired())
                 .map(e -> courseMapper.toDTO(e.getCourse(), courseFavoriteRepository.existsByUser_EmailAndCourse_CourseId(userEmail, e.getCourse().getCourseId())))
                 .toList();
 
         List<CourseResponseDTO> completed = enrollments.stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.COMPLETED)
+                .filter(e -> e.getStatus() == EnrollmentStatus.COMPLETED && !e.isExpired())
+                .map(e -> courseMapper.toDTO(e.getCourse(), courseFavoriteRepository.existsByUser_EmailAndCourse_CourseId(userEmail, e.getCourse().getCourseId())))
+                .toList();
+
+        List<CourseResponseDTO> expired = enrollments.stream()
+                .filter(Enrollments::isExpired)
                 .map(e -> courseMapper.toDTO(e.getCourse(), courseFavoriteRepository.existsByUser_EmailAndCourse_CourseId(userEmail, e.getCourse().getCourseId())))
                 .toList();
 
@@ -472,6 +505,6 @@ public class CourseService {
                 .map(f -> courseMapper.toDTO(f.getCourse(), true))
                 .toList();
 
-        return new MyCoursesSummaryDTO(inProgress, completed, saved);
+        return new MyCoursesSummaryDTO(inProgress, completed, saved, expired);
     }
 }

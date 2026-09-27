@@ -8,6 +8,7 @@ import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.EnrollmentStatus;
 import com.ly.lmsbackend.model.Enrollments;
 import com.ly.lmsbackend.model.PaymentStatus;
+import com.ly.lmsbackend.model.Payments;
 import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.List;
 
 @Service
@@ -82,33 +84,58 @@ public class EnrollmentService {
         Users user = getUserByEmail(email);
         Courses course = getCourse(dto.courseId());
 
+        int durationDays = course.getAccessDurationDays() != null && course.getAccessDurationDays() > 0
+                ? course.getAccessDurationDays()
+                : 180;
+        Timestamp expirationDate = new Timestamp(System.currentTimeMillis() + (long) durationDays * 24L * 60L * 60L * 1000L);
+
+        Enrollments existingEnrollment = enrollmentRepository
+                .findByUser_IdAndCourse_CourseId(user.getId(), course.getCourseId())
+                .orElse(null);
+
+        boolean isExpiredOrCancelled = existingEnrollment != null &&
+                (existingEnrollment.getStatus() == EnrollmentStatus.CANCELLED || existingEnrollment.isExpired());
+
+        if (existingEnrollment != null && !isExpiredOrCancelled) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already actively enrolled in this course");
+        }
+
         if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-            boolean hasPaid = paymentRepository != null && paymentRepository
-                    .findFirstByUser_EmailAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
-                            email, course.getCourseId(), PaymentStatus.PAID
-                    ).isPresent();
+            boolean hasPaid = false;
+            if (paymentRepository != null) {
+                var paymentOpt = paymentRepository.findFirstByUser_EmailAndCourse_CourseIdAndStatusOrderByCreatedAtDesc(
+                        email, course.getCourseId(), PaymentStatus.PAID
+                );
+                if (paymentOpt.isPresent()) {
+                    Payments latestPaid = paymentOpt.get();
+                    if (existingEnrollment != null && existingEnrollment.isExpired()) {
+                        Timestamp cutoff = existingEnrollment.getExpirationDate() != null
+                                ? existingEnrollment.getExpirationDate()
+                                : existingEnrollment.getEnrolledAt();
+                        hasPaid = latestPaid.getCreatedAt() != null &&
+                                (cutoff == null || latestPaid.getCreatedAt().after(cutoff) || latestPaid.getCreatedAt().equals(cutoff)
+                                        || Boolean.TRUE.equals(latestPaid.getIsReEnrollmentDiscount()));
+                    } else {
+                        hasPaid = true;
+                    }
+                }
+            }
 
             if (!hasPaid) {
                 throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Payment required to enroll in this course");
             }
         }
 
-        Enrollments existingEnrollment = enrollmentRepository
-                .findByUser_IdAndCourse_CourseId(user.getId(), course.getCourseId())
-                .orElse(null);
-
         if (existingEnrollment != null) {
-            if (existingEnrollment.getStatus() != EnrollmentStatus.CANCELLED) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already enrolled in this course");
-            }
-
             existingEnrollment.setStatus(EnrollmentStatus.ACTIVE);
+            existingEnrollment.setExpirationDate(expirationDate);
+            existingEnrollment.setEnrolledAt(new Timestamp(System.currentTimeMillis()));
             Enrollments saved = enrollmentRepository.save(existingEnrollment);
             if (activityLogService != null) {
-                activityLogService.logActivity(user, "ENROLLED", "Re-enrolled in course: " + course.getTitle());
+                activityLogService.logActivity(user, "ENROLLED", "Re-enrolled in course: " + course.getTitle() + " (Access valid for " + durationDays + " days)");
             }
             if (notificationService != null) {
-                notificationService.sendNotification(user, "Course Enrollment", "You have re-enrolled in " + course.getTitle(), "COURSE", "/api/courses/" + course.getCourseId());
+                notificationService.sendNotification(user, "Course Enrollment", "You have re-enrolled in " + course.getTitle() + ". Your access is active until " + expirationDate, "COURSE", "/api/courses/" + course.getCourseId());
             }
             return enrollmentMapper.toDTO(saved);
         }
@@ -117,13 +144,14 @@ public class EnrollmentService {
         enrollment.setUser(user);
         enrollment.setCourse(course);
         enrollment.setStatus(EnrollmentStatus.ACTIVE);
+        enrollment.setExpirationDate(expirationDate);
 
         Enrollments saved = enrollmentRepository.save(enrollment);
         if (activityLogService != null) {
-            activityLogService.logActivity(user, "ENROLLED", "Enrolled in course: " + course.getTitle());
+            activityLogService.logActivity(user, "ENROLLED", "Enrolled in course: " + course.getTitle() + " (Access valid for " + durationDays + " days)");
         }
         if (notificationService != null) {
-            notificationService.sendNotification(user, "Welcome to the Course!", "You are now enrolled in " + course.getTitle() + ". Start learning today!", "COURSE", "/api/courses/" + course.getCourseId());
+            notificationService.sendNotification(user, "Welcome to the Course!", "You are now enrolled in " + course.getTitle() + ". Start learning today! Access valid until " + expirationDate, "COURSE", "/api/courses/" + course.getCourseId());
         }
 
         return enrollmentMapper.toDTO(saved);
@@ -134,16 +162,23 @@ public class EnrollmentService {
         Courses course = getCourse(dto.courseId());
         verifyCanManageCourse(managerEmail, course);
 
+        int durationDays = course.getAccessDurationDays() != null && course.getAccessDurationDays() > 0
+                ? course.getAccessDurationDays()
+                : 180;
+        Timestamp expirationDate = new Timestamp(System.currentTimeMillis() + (long) durationDays * 24L * 60L * 60L * 1000L);
+
         Enrollments existingEnrollment = enrollmentRepository
                 .findByUser_IdAndCourse_CourseId(user.getId(), course.getCourseId())
                 .orElse(null);
 
         if (existingEnrollment != null) {
-            if (existingEnrollment.getStatus() != EnrollmentStatus.CANCELLED) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already enrolled in this course");
+            boolean isExpiredOrCancelled = existingEnrollment.getStatus() == EnrollmentStatus.CANCELLED || existingEnrollment.isExpired();
+            if (!isExpiredOrCancelled && dto.status() == null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already actively enrolled in this course");
             }
 
             existingEnrollment.setStatus(dto.status() == null ? EnrollmentStatus.ACTIVE : dto.status());
+            existingEnrollment.setExpirationDate(expirationDate);
             return enrollmentMapper.toDTO(enrollmentRepository.save(existingEnrollment));
         }
 
@@ -151,6 +186,7 @@ public class EnrollmentService {
         enrollment.setUser(user);
         enrollment.setCourse(course);
         enrollment.setStatus(dto.status() == null ? EnrollmentStatus.ACTIVE : dto.status());
+        enrollment.setExpirationDate(expirationDate);
 
         return enrollmentMapper.toDTO(enrollmentRepository.save(enrollment));
     }

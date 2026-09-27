@@ -23,7 +23,8 @@ public record CourseResponseDTO(
         CourseStatus status,
         Long lessonCount,
         Long enrollmentCount,
-        Boolean isFavorite
+        Boolean isFavorite,
+        Integer accessDurationDays
 ) {
     public CourseResponseDTO(
             Long courseId,
@@ -41,7 +42,31 @@ public record CourseResponseDTO(
     ) {
         this(courseId, title, description, price, overallDuration, coverUrl, coverPublicId,
                 instructorId, instructor, categoryIds, categories, rating,
-                CourseLevel.ALL_LEVELS, CourseStatus.PUBLISHED, 0L, 0L, false);
+                CourseLevel.ALL_LEVELS, CourseStatus.PUBLISHED, 0L, 0L, false, 180);
+    }
+
+    public CourseResponseDTO(
+            Long courseId,
+            String title,
+            String description,
+            BigDecimal price,
+            String overallDuration,
+            String coverUrl,
+            String coverPublicId,
+            Long instructorId,
+            String instructor,
+            List<Long> categoryIds,
+            List<String> categories,
+            Double rating,
+            CourseLevel level,
+            CourseStatus status,
+            Long lessonCount,
+            Long enrollmentCount,
+            Boolean isFavorite
+    ) {
+        this(courseId, title, description, price, overallDuration, coverUrl, coverPublicId,
+                instructorId, instructor, categoryIds, categories, rating,
+                level, status, lessonCount, enrollmentCount, isFavorite, 180);
     }
 }
 

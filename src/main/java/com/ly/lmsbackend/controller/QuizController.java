@@ -57,13 +57,13 @@ public class QuizController {
         return ResponseEntity.ok(quizService.submitQuiz(id, dto, authentication.getName()));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping("/api/quizzes")
     public ResponseEntity<QuizResponseDTO> addQuiz(@Valid @RequestBody QuizCreateDTO dto){
         return new ResponseEntity<>(quizService.addQuiz(dto),HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PutMapping("/api/quizzes/{id}")
     public ResponseEntity<QuizResponseDTO> updateQuiz(
             @PathVariable Long id,
@@ -72,7 +72,7 @@ public class QuizController {
         return new ResponseEntity<>(quizService.updateQuiz(id,dto), HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @DeleteMapping("/api/quizzes/{id}")
     public ResponseEntity<String> deleteQuiz(@PathVariable Long id){
         quizService.deleteQuiz(id);

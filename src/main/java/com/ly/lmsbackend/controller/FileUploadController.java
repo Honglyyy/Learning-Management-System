@@ -21,25 +21,79 @@ public class FileUploadController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping(value = "/api/uploads/course-cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponseDTO> uploadCourseCover(@RequestParam("file") MultipartFile file) {
-        return new ResponseEntity<>(fileUploadService.uploadCourseCover(file), HttpStatus.CREATED);
+    public ResponseEntity<FileUploadResponseDTO> uploadCourseCover(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "courseId", required = false) Long courseId,
+            @RequestParam(value = "courseName", required = false) String courseName,
+            @RequestParam(value = "courseTitle", required = false) String courseTitle,
+            @RequestParam(value = "username", required = false) String username
+    ) {
+        String resolvedCourseName = (courseName != null && !courseName.isBlank()) ? courseName : courseTitle;
+        return new ResponseEntity<>(fileUploadService.uploadCourseCover(file, courseId, resolvedCourseName, username), HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping(value = "/api/uploads/lesson-video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponseDTO> uploadLessonVideo(@RequestParam("file") MultipartFile file) {
-        return new ResponseEntity<>(fileUploadService.uploadLessonVideo(file), HttpStatus.CREATED);
+    public ResponseEntity<FileUploadResponseDTO> uploadLessonVideo(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "lessonId", required = false) Long lessonId,
+            @RequestParam(value = "lessonName", required = false) String lessonName,
+            @RequestParam(value = "lessonTitle", required = false) String lessonTitle,
+            @RequestParam(value = "sectionId", required = false) Long sectionId,
+            @RequestParam(value = "courseId", required = false) Long courseId,
+            @RequestParam(value = "courseName", required = false) String courseName,
+            @RequestParam(value = "courseTitle", required = false) String courseTitle,
+            @RequestParam(value = "username", required = false) String username
+    ) {
+        String resolvedLessonName = (lessonName != null && !lessonName.isBlank()) ? lessonName : lessonTitle;
+        String resolvedCourseName = (courseName != null && !courseName.isBlank()) ? courseName : courseTitle;
+        return new ResponseEntity<>(fileUploadService.uploadLessonVideo(file, lessonId, sectionId, courseId, resolvedLessonName, resolvedCourseName, username), HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     @PostMapping(value = "/api/uploads/material", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponseDTO> uploadMaterial(@RequestParam("file") MultipartFile file) {
-        return new ResponseEntity<>(fileUploadService.uploadMaterial(file), HttpStatus.CREATED);
+    public ResponseEntity<FileUploadResponseDTO> uploadMaterial(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "lessonId", required = false) Long lessonId,
+            @RequestParam(value = "lessonName", required = false) String lessonName,
+            @RequestParam(value = "lessonTitle", required = false) String lessonTitle,
+            @RequestParam(value = "sectionId", required = false) Long sectionId,
+            @RequestParam(value = "courseId", required = false) Long courseId,
+            @RequestParam(value = "courseName", required = false) String courseName,
+            @RequestParam(value = "courseTitle", required = false) String courseTitle,
+            @RequestParam(value = "username", required = false) String username
+    ) {
+        String resolvedLessonName = (lessonName != null && !lessonName.isBlank()) ? lessonName : lessonTitle;
+        String resolvedCourseName = (courseName != null && !courseName.isBlank()) ? courseName : courseTitle;
+        return new ResponseEntity<>(fileUploadService.uploadMaterial(file, lessonId, sectionId, courseId, resolvedLessonName, resolvedCourseName, username), HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR', 'STUDENT', 'USER')")
     @PostMapping(value = "/api/uploads/assignment-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileUploadResponseDTO> uploadAssignmentFile(@RequestParam("file") MultipartFile file) {
-        return new ResponseEntity<>(fileUploadService.uploadAssignmentFile(file), HttpStatus.CREATED);
+    public ResponseEntity<FileUploadResponseDTO> uploadAssignmentFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "assignmentId", required = false) Long assignmentId,
+            @RequestParam(value = "assignmentTitle", required = false) String assignmentTitle,
+            @RequestParam(value = "courseId", required = false) Long courseId,
+            @RequestParam(value = "courseName", required = false) String courseName,
+            @RequestParam(value = "courseTitle", required = false) String courseTitle,
+            @RequestParam(value = "sectionId", required = false) Long sectionId,
+            @RequestParam(value = "lessonId", required = false) Long lessonId,
+            @RequestParam(value = "lessonName", required = false) String lessonName,
+            @RequestParam(value = "lessonTitle", required = false) String lessonTitle,
+            @RequestParam(value = "username", required = false) String username
+    ) {
+        String resolvedCourseName = (courseName != null && !courseName.isBlank()) ? courseName : courseTitle;
+        String resolvedLessonName = (lessonName != null && !lessonName.isBlank()) ? lessonName : lessonTitle;
+        return new ResponseEntity<>(fileUploadService.uploadAssignmentFile(file, assignmentId, courseId, sectionId, lessonId, assignmentTitle, resolvedCourseName, resolvedLessonName, username), HttpStatus.CREATED);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping(value = "/api/uploads/profile-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FileUploadResponseDTO> uploadProfilePhoto(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "username", required = false) String username
+    ) {
+        return new ResponseEntity<>(fileUploadService.uploadProfilePhoto(file, username), HttpStatus.CREATED);
     }
 }

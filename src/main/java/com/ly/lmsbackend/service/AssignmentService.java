@@ -97,6 +97,17 @@ public class AssignmentService {
             }
         }
 
+        String supportingFilePublicId = dto.supportingFilePublicId();
+        String supportingFileUrl = dto.supportingFileUrl();
+        if (fileUploadService != null && supportingFilePublicId != null && !supportingFilePublicId.isBlank()) {
+            String instructorUsername = course.getInstructor() != null ? course.getInstructor().getUsername() : user.getUsername();
+            var organized = fileUploadService.organizeAssignmentSupportingFile(supportingFilePublicId, instructorUsername, course.getTitle(), null);
+            if (organized != null) {
+                supportingFilePublicId = organized.publicId();
+                supportingFileUrl = organized.url();
+            }
+        }
+
         Assignment assignment = Assignment.builder()
                 .course(course)
                 .section(section)
@@ -107,8 +118,8 @@ public class AssignmentService {
                 .startDate(dto.startDate())
                 .dueDate(dto.dueDate())
                 .maxScore(dto.maxScore() != null && dto.maxScore() > 0 ? dto.maxScore() : 100.0)
-                .supportingFileUrl(dto.supportingFileUrl())
-                .supportingFilePublicId(dto.supportingFilePublicId())
+                .supportingFileUrl(supportingFileUrl)
+                .supportingFilePublicId(supportingFilePublicId)
                 .allowResubmission(dto.allowResubmission() != null ? dto.allowResubmission() : true)
                 .build();
 
@@ -172,11 +183,24 @@ public class AssignmentService {
         if (dto.maxScore() != null && dto.maxScore() > 0) {
             assignment.setMaxScore(dto.maxScore());
         }
-        if (dto.supportingFileUrl() != null) {
-            assignment.setSupportingFileUrl(dto.supportingFileUrl());
-        }
         if (dto.supportingFilePublicId() != null) {
-            assignment.setSupportingFilePublicId(dto.supportingFilePublicId());
+            String supportingFilePublicId = dto.supportingFilePublicId();
+            String supportingFileUrl = dto.supportingFileUrl() != null ? dto.supportingFileUrl() : assignment.getSupportingFileUrl();
+            if (fileUploadService != null && !supportingFilePublicId.isBlank()) {
+                String instructorUsername = assignment.getCourse() != null && assignment.getCourse().getInstructor() != null
+                        ? assignment.getCourse().getInstructor().getUsername()
+                        : user.getUsername();
+                String courseTitle = assignment.getCourse() != null ? assignment.getCourse().getTitle() : null;
+                var organized = fileUploadService.organizeAssignmentSupportingFile(supportingFilePublicId, instructorUsername, courseTitle, null);
+                if (organized != null) {
+                    supportingFilePublicId = organized.publicId();
+                    supportingFileUrl = organized.url();
+                }
+            }
+            assignment.setSupportingFilePublicId(supportingFilePublicId);
+            assignment.setSupportingFileUrl(supportingFileUrl);
+        } else if (dto.supportingFileUrl() != null) {
+            assignment.setSupportingFileUrl(dto.supportingFileUrl());
         }
         if (dto.allowResubmission() != null) {
             assignment.setAllowResubmission(dto.allowResubmission());
@@ -230,6 +254,21 @@ public class AssignmentService {
         Optional<AssignmentSubmission> existingOpt = submissionRepository
                 .findByAssignment_AssignmentIdAndStudent_Id(assignmentId, user.getId());
 
+        String submissionPublicId = dto.filePublicId();
+        String submissionUrl = dto.fileUrl();
+
+        if (fileUploadService != null && submissionPublicId != null && !submissionPublicId.isBlank()) {
+            String instructorUsername = assignment.getCourse() != null && assignment.getCourse().getInstructor() != null
+                    ? assignment.getCourse().getInstructor().getUsername()
+                    : null;
+            String courseTitle = assignment.getCourse() != null ? assignment.getCourse().getTitle() : null;
+            var organized = fileUploadService.organizeAssignmentSubmission(submissionPublicId, instructorUsername, courseTitle, user.getUsername());
+            if (organized != null) {
+                submissionPublicId = organized.publicId();
+                submissionUrl = organized.url();
+            }
+        }
+
         AssignmentSubmission submission;
         if (existingOpt.isPresent()) {
             submission = existingOpt.get();
@@ -239,12 +278,12 @@ public class AssignmentService {
             if (Boolean.FALSE.equals(assignment.getAllowResubmission())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resubmission is not allowed for this assignment");
             }
-            if (submission.getFilePublicId() != null && !submission.getFilePublicId().equals(dto.filePublicId())) {
+            if (fileUploadService != null && submission.getFilePublicId() != null && !submission.getFilePublicId().equals(submissionPublicId)) {
                 fileUploadService.deleteAsset(submission.getFilePublicId());
             }
             submission.setTextSubmission(dto.textSubmission());
-            submission.setFileUrl(dto.fileUrl());
-            submission.setFilePublicId(dto.filePublicId());
+            submission.setFileUrl(submissionUrl);
+            submission.setFilePublicId(submissionPublicId);
             submission.setSubmittedAt(now);
             submission.setStatus(initialStatus);
             submission.setScore(null);
@@ -257,8 +296,8 @@ public class AssignmentService {
                     .assignment(assignment)
                     .student(user)
                     .textSubmission(dto.textSubmission())
-                    .fileUrl(dto.fileUrl())
-                    .filePublicId(dto.filePublicId())
+                    .fileUrl(submissionUrl)
+                    .filePublicId(submissionPublicId)
                     .submittedAt(now)
                     .status(initialStatus)
                     .build();

@@ -36,6 +36,7 @@ public class CourseService {
     private final QuizAttemptRepository quizAttemptRepository;
     private final CourseFavoriteRepository courseFavoriteRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final FileUploadService fileUploadService;
 
     public CourseService(
             CourseRepository courseRepository,
@@ -49,6 +50,25 @@ public class CourseService {
             CourseFavoriteRepository courseFavoriteRepository,
             EnrollmentRepository enrollmentRepository
     ) {
+        this(courseRepository, courseMapper, categoryRepository, userRepository, sectionRepository,
+                sectionMapper, courseReviewRepository, quizAttemptRepository, courseFavoriteRepository,
+                enrollmentRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CourseService(
+            CourseRepository courseRepository,
+            CourseMapper courseMapper,
+            CategoryRepository categoryRepository,
+            UserRepository userRepository,
+            SectionRepository sectionRepository,
+            SectionMapper sectionMapper,
+            CourseReviewRepository courseReviewRepository,
+            QuizAttemptRepository quizAttemptRepository,
+            CourseFavoriteRepository courseFavoriteRepository,
+            EnrollmentRepository enrollmentRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) FileUploadService fileUploadService
+    ) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.courseMapper = courseMapper;
@@ -59,6 +79,7 @@ public class CourseService {
         this.quizAttemptRepository = quizAttemptRepository;
         this.courseFavoriteRepository = courseFavoriteRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.fileUploadService = fileUploadService;
     }
 
     public List<CourseResponseDTO> getAllCourses() {
@@ -159,6 +180,7 @@ public class CourseService {
                 : Collections.emptyList();
 
         Courses course = courseMapper.toEntity(dto, instructor, categories);
+        organizeCourseCover(course);
         return courseMapper.toDTO(courseRepository.save(course));
     }
 
@@ -171,6 +193,7 @@ public class CourseService {
                 : Collections.emptyList();
 
         Courses course = courseMapper.toEntity(dto, instructor, categories);
+        organizeCourseCover(course);
         return courseMapper.toDTO(courseRepository.save(course));
     }
 
@@ -178,6 +201,10 @@ public class CourseService {
     public void deleteCourse(Long id) {
         Courses course = courseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        if (fileUploadService != null && course.getCoverPublicId() != null && !course.getCoverPublicId().isBlank()) {
+            fileUploadService.deleteAsset(course.getCoverPublicId());
+        }
 
         course.getCategories().clear();
         quizAttemptRepository.deleteAllByCourseId(id);
@@ -224,6 +251,7 @@ public class CourseService {
             existingCourse.setRequirements(dto.requirements());
         }
 
+        organizeCourseCover(existingCourse);
         return courseMapper.toDTO(courseRepository.save(existingCourse));
     }
 
@@ -362,6 +390,10 @@ public class CourseService {
             throw new RuntimeException("Unauthorized");
         }
 
+        if (fileUploadService != null && course.getCoverPublicId() != null && !course.getCoverPublicId().isBlank()) {
+            fileUploadService.deleteAsset(course.getCoverPublicId());
+        }
+
         course.getCategories().clear();
         quizAttemptRepository.deleteAllByCourseId(id);
         courseRepository.delete(course);
@@ -404,8 +436,21 @@ public class CourseService {
             course.setRequirements(dto.requirements());
         }
 
+        organizeCourseCover(course);
         Courses updated = courseRepository.save(course);
         return courseMapper.toDTO(updated);
+    }
+
+    private void organizeCourseCover(Courses course) {
+        if (fileUploadService == null || course == null || course.getCoverPublicId() == null || course.getCoverPublicId().isBlank()) {
+            return;
+        }
+        String instructorUsername = course.getInstructor() != null ? course.getInstructor().getUsername() : null;
+        var organized = fileUploadService.organizeCourseCover(course.getCoverPublicId(), instructorUsername, course.getTitle());
+        if (organized != null) {
+            course.setCoverPublicId(organized.publicId());
+            course.setCoverUrl(organized.url());
+        }
     }
 
     @Transactional(readOnly = true)

@@ -76,11 +76,33 @@ public class LessonMaterialService {
         Lessons lesson = getLesson(lessonId);
         verifyCanManageLesson(lesson, userEmail);
 
+        String filePublicId = dto.filePublicId();
+        String fileUrl = dto.fileUrl().trim();
+
+        if (fileUploadService != null && filePublicId != null && !filePublicId.isBlank()) {
+            String instructorUsername = null;
+            if (lesson.getInstructor() != null) {
+                instructorUsername = lesson.getInstructor().getUsername();
+            } else if (lesson.getSection() != null && lesson.getSection().getInstructor() != null) {
+                instructorUsername = lesson.getSection().getInstructor().getUsername();
+            } else if (lesson.getSection() != null && lesson.getSection().getCourse() != null && lesson.getSection().getCourse().getInstructor() != null) {
+                instructorUsername = lesson.getSection().getCourse().getInstructor().getUsername();
+            }
+            String courseTitle = (lesson.getSection() != null && lesson.getSection().getCourse() != null)
+                    ? lesson.getSection().getCourse().getTitle()
+                    : null;
+            var organized = fileUploadService.organizeMaterial(filePublicId, instructorUsername, courseTitle, lesson.getTitle());
+            if (organized != null) {
+                filePublicId = organized.publicId();
+                fileUrl = organized.url();
+            }
+        }
+
         LessonMaterial material = LessonMaterial.builder()
                 .lesson(lesson)
                 .title(dto.title().trim())
-                .fileUrl(dto.fileUrl().trim())
-                .filePublicId(dto.filePublicId())
+                .fileUrl(fileUrl)
+                .filePublicId(filePublicId)
                 .fileType(dto.fileType() != null ? dto.fileType().toUpperCase() : "DOC")
                 .fileSize(dto.fileSize())
                 .build();

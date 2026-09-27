@@ -29,6 +29,7 @@ public class PaymentService {
     private final EnrollmentService enrollmentService;
     private final PaymentMapper paymentMapper;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Autowired
     public PaymentService(
@@ -37,7 +38,8 @@ public class PaymentService {
             UserRepository userRepository,
             EnrollmentService enrollmentService,
             PaymentMapper paymentMapper,
-            EmailService emailService
+            EmailService emailService,
+            NotificationService notificationService
     ) {
         this.paymentRepository = paymentRepository;
         this.courseRepository = courseRepository;
@@ -45,6 +47,7 @@ public class PaymentService {
         this.enrollmentService = enrollmentService;
         this.paymentMapper = paymentMapper;
         this.emailService = emailService;
+        this.notificationService = notificationService;
     }
 
     public PaymentService(
@@ -54,7 +57,7 @@ public class PaymentService {
             EnrollmentService enrollmentService,
             PaymentMapper paymentMapper
     ) {
-        this(paymentRepository, courseRepository, userRepository, enrollmentService, paymentMapper, null);
+        this(paymentRepository, courseRepository, userRepository, enrollmentService, paymentMapper, null, null);
     }
 
     public PaymentResponseDTO createCheckout(PaymentCheckoutRequestDTO dto, String email) {
@@ -192,6 +195,16 @@ public class PaymentService {
                     enrollmentDate,
                     courseUrl
             );
+
+            if (notificationService != null) {
+                notificationService.sendNotification(
+                        student,
+                        "Payment Approved",
+                        "Your payment for '" + courseTitle + "' has been approved! You can now access the course.",
+                        "PAYMENT",
+                        courseUrl
+                );
+            }
         } catch (Exception ignored) {
         }
     }

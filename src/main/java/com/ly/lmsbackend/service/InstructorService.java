@@ -96,7 +96,7 @@ public class InstructorService {
             fileUploadService.deleteAsset(instructor.getProfilePhotoPublicId());
         }
 
-        FileUploadResponseDTO uploadResponse = fileUploadService.uploadInstructorPhoto(file);
+        FileUploadResponseDTO uploadResponse = fileUploadService.uploadInstructorPhoto(file, user.getUsername());
         instructor.setProfilePhotoUrl(uploadResponse.url());
         instructor.setProfilePhotoPublicId(uploadResponse.publicId());
 

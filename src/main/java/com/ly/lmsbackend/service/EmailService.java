@@ -143,31 +143,31 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, plainText, htmlContent);
     }
 
-    public void sendWelcomeLogin(String toEmail) {
-        String subject = "Security Notification: Sign-In to Lumen LMS";
-        String plainText = "Hello,\n\n"
-                + "We detected a recent sign-in to your Lumen LMS account (" + toEmail + ").\n\n"
-                + "If this was you, you can safely ignore this message.\n"
-                + "If you did not perform this login, please reset your password immediately to safeguard your account.\n\n"
-                + "The Lumen LMS Security Team";
-
-        String htmlContent = buildHtmlLayout(
-                "Sign-In Notification",
-                "<h2 style=\"margin:0 0 12px;font-size:18px;color:#0f172a;\">New Sign-In Detected</h2>\n"
-                + "<p style=\"margin:0 0 16px;font-size:14px;color:#475569;line-height:1.6;\">\n"
-                + "  A successful sign-in to your account (<strong>" + toEmail + "</strong>) was just completed.\n"
-                + "</p>\n"
-                + "<div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:20px 0;font-size:13px;color:#475569;\">\n"
-                + "  <div style=\"margin-bottom:6px;\"><strong>Platform:</strong> Lumen LMS Web Portal</div>\n"
-                + "  <div><strong>Timestamp:</strong> " + new Date() + "</div>\n"
-                + "</div>\n"
-                + "<p style=\"margin:16px 0 0;font-size:12px;color:#94a3b8;line-height:1.5;\">\n"
-                + "  If you initiated this sign-in, you don't need to do anything. If you suspect unauthorized access, please update your password immediately from your account profile.\n"
-                + "</p>"
-        );
-
-        sendHtmlEmail(toEmail, subject, plainText, htmlContent);
-    }
+//    public void sendWelcomeLogin(String toEmail) {
+//        String subject = "Security Notification: Sign-In to Lumen LMS";
+//        String plainText = "Hello,\n\n"
+//                + "We detected a recent sign-in to your Lumen LMS account (" + toEmail + ").\n\n"
+//                + "If this was you, you can safely ignore this message.\n"
+//                + "If you did not perform this login, please reset your password immediately to safeguard your account.\n\n"
+//                + "The Lumen LMS Security Team";
+//
+//        String htmlContent = buildHtmlLayout(
+//                "Sign-In Notification",
+//                "<h2 style=\"margin:0 0 12px;font-size:18px;color:#0f172a;\">New Sign-In Detected</h2>\n"
+//                + "<p style=\"margin:0 0 16px;font-size:14px;color:#475569;line-height:1.6;\">\n"
+//                + "  A successful sign-in to your account (<strong>" + toEmail + "</strong>) was just completed.\n"
+//                + "</p>\n"
+//                + "<div style=\"background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:20px 0;font-size:13px;color:#475569;\">\n"
+//                + "  <div style=\"margin-bottom:6px;\"><strong>Platform:</strong> Lumen LMS Web Portal</div>\n"
+//                + "  <div><strong>Timestamp:</strong> " + new Date() + "</div>\n"
+//                + "</div>\n"
+//                + "<p style=\"margin:16px 0 0;font-size:12px;color:#94a3b8;line-height:1.5;\">\n"
+//                + "  If you initiated this sign-in, you don't need to do anything. If you suspect unauthorized access, please update your password immediately from your account profile.\n"
+//                + "</p>"
+//        );
+//
+//        sendHtmlEmail(toEmail, subject, plainText, htmlContent);
+//    }
 
     public void sendResetOtp(String toEmail, String otp) {
         String subject = "Password Reset Request – Lumen LMS (" + otp + ")";

@@ -40,6 +40,7 @@ public class LessonService {
     private final LessonProgressRepository lessonProgressRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final FileUploadService fileUploadService;
 
     public LessonService(
             LessonMapper lessonMapper,
@@ -52,6 +53,23 @@ public class LessonService {
             UserRepository userRepository,
             EnrollmentRepository enrollmentRepository
     ) {
+        this(lessonMapper, lessonRepository, sectionRepository, courseRepository, quizRepository,
+                quizAttemptRepository, lessonProgressRepository, userRepository, enrollmentRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public LessonService(
+            LessonMapper lessonMapper,
+            LessonRepository lessonRepository,
+            SectionRepository sectionRepository,
+            CourseRepository courseRepository,
+            QuizRepository quizRepository,
+            QuizAttemptRepository quizAttemptRepository,
+            LessonProgressRepository lessonProgressRepository,
+            UserRepository userRepository,
+            EnrollmentRepository enrollmentRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) FileUploadService fileUploadService
+    ) {
         this.lessonRepository = lessonRepository;
         this.lessonMapper = lessonMapper;
         this.sectionRepository = sectionRepository;
@@ -61,6 +79,7 @@ public class LessonService {
         this.lessonProgressRepository = lessonProgressRepository;
         this.userRepository = userRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.fileUploadService = fileUploadService;
     }
 
     public List<LessonResponseDTO> getLessons() {
@@ -72,12 +91,9 @@ public class LessonService {
 
 
     public LessonResponseDTO addLesson(LessonCreateDTO dto) {
-        Lessons lesson = new Lessons();
-
         Sections section = sectionRepository.findById(dto.sectionId()).orElse(null);
-
-        lesson = lessonMapper.toEntity(dto, section);
-
+        Lessons lesson = lessonMapper.toEntity(dto, section);
+        organizeLessonVideo(lesson);
         return lessonMapper.toDto(lessonRepository.save(lesson));
     }
 
@@ -96,6 +112,7 @@ public class LessonService {
         if (dto.isFree() != null) existingLesson.setIsFree(dto.isFree());
         existingLesson.setSection(sectionId);
 
+        organizeLessonVideo(existingLesson);
         return lessonMapper.toDto(lessonRepository.save(existingLesson));
     }
 
@@ -104,6 +121,10 @@ public class LessonService {
 
         Lessons lesson = lessonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Lesson not found"));
+
+        if (fileUploadService != null && lesson.getVideoPublicId() != null && !lesson.getVideoPublicId().isBlank()) {
+            fileUploadService.deleteAsset(lesson.getVideoPublicId());
+        }
 
         lessonProgressRepository.deleteAllByLesson_LessonId(id);
         quizAttemptRepository.deleteAllByLessonId(id);
@@ -240,6 +261,8 @@ public class LessonService {
                 section.getInstructor()
         );
 
+        organizeLessonVideo(lessons);
+
         return lessonMapper.toDto(
                 lessonRepository.save(lessons)
         );
@@ -266,6 +289,10 @@ public class LessonService {
             throw new AccessDeniedException(
                     "Unauthorized"
             );
+        }
+
+        if (fileUploadService != null && lesson.getVideoPublicId() != null && !lesson.getVideoPublicId().isBlank()) {
+            fileUploadService.deleteAsset(lesson.getVideoPublicId());
         }
 
         lessonProgressRepository.deleteAllByLesson_LessonId(id);
@@ -304,8 +331,32 @@ public class LessonService {
         if (dto.duration() != null) lesson.setDuration(dto.duration());
         if (dto.isFree() != null) lesson.setIsFree(dto.isFree());
 
+        organizeLessonVideo(lesson);
+
         Lessons updated = lessonRepository.save(lesson);
 
         return lessonMapper.toDto(updated);
+    }
+
+    private void organizeLessonVideo(Lessons lesson) {
+        if (fileUploadService == null || lesson == null || lesson.getVideoPublicId() == null || lesson.getVideoPublicId().isBlank()) {
+            return;
+        }
+        String instructorUsername = null;
+        if (lesson.getInstructor() != null) {
+            instructorUsername = lesson.getInstructor().getUsername();
+        } else if (lesson.getSection() != null && lesson.getSection().getInstructor() != null) {
+            instructorUsername = lesson.getSection().getInstructor().getUsername();
+        } else if (lesson.getSection() != null && lesson.getSection().getCourse() != null && lesson.getSection().getCourse().getInstructor() != null) {
+            instructorUsername = lesson.getSection().getCourse().getInstructor().getUsername();
+        }
+        String courseTitle = (lesson.getSection() != null && lesson.getSection().getCourse() != null)
+                ? lesson.getSection().getCourse().getTitle()
+                : null;
+        var organized = fileUploadService.organizeLessonVideo(lesson.getVideoPublicId(), instructorUsername, courseTitle, lesson.getTitle());
+        if (organized != null) {
+            lesson.setVideoPublicId(organized.publicId());
+            lesson.setVideoUrl(organized.url());
+        }
     }
 }

@@ -53,13 +53,13 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
             }
 
-            try {
-                if (isVerifiedUser.getRole() != Roles.ADMIN) {
-                    emailService.sendWelcomeLogin(isVerifiedUser.getEmail());
-                }
-            } catch (Exception e) {
-                // Non-fatal: email failure must not break login
-            }
+//            try {
+//                if (isVerifiedUser.getRole() != Roles.ADMIN) {
+//                    emailService.sendWelcomeLogin(isVerifiedUser.getEmail());
+//                }
+//            } catch (Exception e) {
+//                // Non-fatal: email failure must not break login
+//            }
 
             try {
                 if (activityLogService != null) {

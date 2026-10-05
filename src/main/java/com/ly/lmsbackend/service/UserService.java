@@ -110,7 +110,8 @@ public class UserService {
             return;
         }
 
-        existingUser.setOtp(otp);
+//        existingUser.setOtp(otp);
+        existingUser.setOtp("123456"); // testing
         existingUser.setVerifyOtpExpireAt(expireAt);
 
         userRepository.save(existingUser);
@@ -147,7 +148,7 @@ public class UserService {
 
         Users saved = userRepository.save(existingUser);
         try {
-            emailService.successOtp(saved.getEmail());
+//            emailService.successOtp(saved.getEmail());
         } catch (Exception e) {
             log.warn("Failed to send successOtp email to {}: {}", saved.getEmail(), e.getMessage());
         }

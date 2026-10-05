@@ -118,30 +118,30 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, plainText, htmlContent);
     }
 
-    public void successOtp(String toEmail) {
-        String subject = "Welcome to Lumen LMS – Your Account is Active!";
-        String plainText = "Congratulations!\n\n"
-                + "Your email has been successfully verified, and your Lumen LMS account is now fully active.\n\n"
-                + "You can now log in, explore the course catalog, enroll in interactive lessons, and earn certificates.\n\n"
-                + "Happy learning!\n\nThe Lumen LMS Team";
-
-        String htmlContent = buildHtmlLayout(
-                "Account Activated",
-                "<h2 style=\"margin:0 0 12px;font-size:18px;color:#0f172a;\">Account Activated 🎉</h2>\n"
-                + "<p style=\"margin:0 0 18px;font-size:14px;color:#475569;line-height:1.6;\">\n"
-                + "  Congratulations! Your email has been verified and your account is now ready to use.\n"
-                + "</p>\n"
-                + "<div style=\"background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin:20px 0;\">\n"
-                + "  <p style=\"margin:0;font-size:13px;color:#065f46;font-weight:600;\">✓ All features are unlocked</p>\n"
-                + "  <p style=\"margin:4px 0 0;font-size:12px;color:#047857;\">Browse expert-led courses, test your knowledge with interactive quizzes, and earn verifiable certificates.</p>\n"
-                + "</div>\n"
-                + "<p style=\"margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.5;\">\n"
-                + "  Ready to jump in? Visit our portal to browse catalog offerings and start learning today.\n"
-                + "</p>"
-        );
-
-        sendHtmlEmail(toEmail, subject, plainText, htmlContent);
-    }
+//    public void successOtp(String toEmail) {
+//        String subject = "Welcome to Lumen LMS – Your Account is Active!";
+//        String plainText = "Congratulations!\n\n"
+//                + "Your email has been successfully verified, and your Lumen LMS account is now fully active.\n\n"
+//                + "You can now log in, explore the course catalog, enroll in interactive lessons, and earn certificates.\n\n"
+//                + "Happy learning!\n\nThe Lumen LMS Team";
+//
+//        String htmlContent = buildHtmlLayout(
+//                "Account Activated",
+//                "<h2 style=\"margin:0 0 12px;font-size:18px;color:#0f172a;\">Account Activated 🎉</h2>\n"
+//                + "<p style=\"margin:0 0 18px;font-size:14px;color:#475569;line-height:1.6;\">\n"
+//                + "  Congratulations! Your email has been verified and your account is now ready to use.\n"
+//                + "</p>\n"
+//                + "<div style=\"background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:16px;margin:20px 0;\">\n"
+//                + "  <p style=\"margin:0;font-size:13px;color:#065f46;font-weight:600;\">✓ All features are unlocked</p>\n"
+//                + "  <p style=\"margin:4px 0 0;font-size:12px;color:#047857;\">Browse expert-led courses, test your knowledge with interactive quizzes, and earn verifiable certificates.</p>\n"
+//                + "</div>\n"
+//                + "<p style=\"margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.5;\">\n"
+//                + "  Ready to jump in? Visit our portal to browse catalog offerings and start learning today.\n"
+//                + "</p>"
+//        );
+//
+//        sendHtmlEmail(toEmail, subject, plainText, htmlContent);
+//    }
 
 //    public void sendWelcomeLogin(String toEmail) {
 //        String subject = "Security Notification: Sign-In to Lumen LMS";

@@ -110,8 +110,8 @@ public class UserService {
             return;
         }
 
-//        existingUser.setOtp(otp);
-        existingUser.setOtp("123456"); // testing
+        existingUser.setOtp(otp);
+//        existingUser.setOtp("123456"); // testing
         existingUser.setVerifyOtpExpireAt(expireAt);
 
         userRepository.save(existingUser);

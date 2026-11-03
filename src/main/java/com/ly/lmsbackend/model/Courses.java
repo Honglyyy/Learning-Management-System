@@ -73,6 +73,7 @@ public class Courses {
     private List<Categories> categories;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sectionId ASC")
     private List<Sections> sections;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)

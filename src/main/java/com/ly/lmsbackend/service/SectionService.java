@@ -9,6 +9,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -35,6 +36,7 @@ public class SectionService {
     public List<SectionResponseDTO> getSections(){
         return sectionRepository.findAll()
                 .stream()
+                .sorted(Comparator.comparing(Sections::getSectionId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(sectionMapper::toDto)
                 .toList();
     }
@@ -77,7 +79,10 @@ public class SectionService {
 
     public List<SectionResponseDTO> getSectionByInstructor(String instructorEmail){
         return sectionRepository.findByInstructor_Email(instructorEmail)
-                .stream().map(sectionMapper::toDto).toList();
+                .stream()
+                .sorted(Comparator.comparing(Sections::getSectionId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(sectionMapper::toDto)
+                .toList();
     }
 
     public List<SectionResponseDTO> getSectionByInstructorAndCourse(String instructorEmail, Long courseId) {
@@ -90,6 +95,7 @@ public class SectionService {
 
         return sectionRepository.findByInstructor_EmailAndCourse_CourseId(instructorEmail, courseId)
                 .stream()
+                .sorted(Comparator.comparing(Sections::getSectionId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(sectionMapper::toDto)
                 .toList();
     }

@@ -53,6 +53,7 @@ public class Sections {
     private Courses course;
 
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC, lessonId ASC")
     private List<Lessons> lessons;
 
     @ManyToOne

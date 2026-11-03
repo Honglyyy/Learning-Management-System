@@ -324,12 +324,15 @@ public class CourseService {
 
         List<SectionDetailDTO> sectionsDetail = sectionRepository.findByCourse_CourseId(courseId)
                 .stream()
+                .sorted(Comparator.comparing(Sections::getSectionId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(sections -> new SectionDetailDTO(
                         sections.getSectionId(),
                         sections.getTitle(),
                         sections.getDuration(),
                         (long) (sections.getLessons() != null ? sections.getLessons().size() : 0),
                         (sections.getLessons() != null ? sections.getLessons().stream() : java.util.stream.Stream.<Lessons>empty())
+                                .sorted(Comparator.comparing(Lessons::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))
+                                        .thenComparing(Lessons::getLessonId, Comparator.nullsLast(Comparator.naturalOrder())))
                                 .map(lessons -> {
                                     boolean canViewVideo = finalHasCourseAccess || Boolean.TRUE.equals(lessons.getIsFree());
                                     return new LessonDetailDTO(

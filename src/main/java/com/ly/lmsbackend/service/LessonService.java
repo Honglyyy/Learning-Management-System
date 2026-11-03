@@ -28,6 +28,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -86,6 +87,8 @@ public class LessonService {
     public List<LessonResponseDTO> getLessons() {
         return lessonRepository.findAll()
                 .stream()
+                .sorted(Comparator.comparing(Lessons::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Lessons::getLessonId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(lessonMapper::toDto)
                 .toList();
     }
@@ -204,7 +207,12 @@ public class LessonService {
     }
 
     public List<LessonResponseDTO> getLessonByInstructor(String instructorEmail) {
-        return lessonRepository.findByInstructor_Email(instructorEmail).stream().map(lessonMapper::toDto).toList();
+        return lessonRepository.findByInstructor_Email(instructorEmail)
+                .stream()
+                .sorted(Comparator.comparing(Lessons::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Lessons::getLessonId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(lessonMapper::toDto)
+                .toList();
     }
 
     public List<LessonResponseDTO> getLessonByInstructorAndSection(String instructorEmail, Long sectionId) {
@@ -217,6 +225,8 @@ public class LessonService {
 
         return lessonRepository.findByInstructor_EmailAndSection_SectionId(instructorEmail, sectionId)
                 .stream()
+                .sorted(Comparator.comparing(Lessons::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Lessons::getLessonId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(lessonMapper::toDto)
                 .toList();
     }
@@ -231,6 +241,9 @@ public class LessonService {
 
         return lessonRepository.findByInstructor_EmailAndSection_Course_CourseId(instructorEmail, courseId)
                 .stream()
+                .sorted(Comparator.comparing((Lessons l) -> l.getSection() != null ? l.getSection().getSectionId() : 0L)
+                        .thenComparing(Lessons::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Lessons::getLessonId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(lessonMapper::toDto)
                 .toList();
     }

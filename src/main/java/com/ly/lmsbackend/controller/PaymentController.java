@@ -52,6 +52,17 @@ public class PaymentController {
     }
 
     @PreAuthorize("isAuthenticated()")
+    @GetMapping("/api/payments/{id}/status")
+    public ResponseEntity<PaymentResponseDTO> getPaymentStatus(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equalsIgnoreCase(a.getAuthority()) || "ADMIN".equalsIgnoreCase(a.getAuthority()));
+        return ResponseEntity.ok(paymentService.checkAndSyncPaymentStatus(id, authentication.getName(), isAdmin));
+    }
+
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/api/payments/me")
     public ResponseEntity<List<PaymentResponseDTO>> getMyPayments(Authentication authentication) {
         return ResponseEntity.ok(paymentService.getMyPayments(authentication.getName()));

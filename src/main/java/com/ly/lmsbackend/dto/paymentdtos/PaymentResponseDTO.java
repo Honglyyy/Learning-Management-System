@@ -21,7 +21,13 @@ public record PaymentResponseDTO(
         String paymentUrl,
         BigDecimal originalAmount,
         BigDecimal discountAmount,
-        Boolean isReEnrollmentDiscount
+        Boolean isReEnrollmentDiscount,
+        String qrCode,
+        String md5,
+        String deepLink,
+        String currency,
+        Timestamp expiresAt,
+        Timestamp paidAt
 ) {
     public PaymentResponseDTO(
             Long paymentId,
@@ -37,7 +43,7 @@ public record PaymentResponseDTO(
             Timestamp createdAt,
             Timestamp updatedAt
     ) {
-        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, null, amount, BigDecimal.ZERO, false);
+        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, null, amount, BigDecimal.ZERO, false, null, null, null, "USD", null, null);
     }
 
     public PaymentResponseDTO(
@@ -55,6 +61,27 @@ public record PaymentResponseDTO(
             Timestamp updatedAt,
             String paymentUrl
     ) {
-        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, paymentUrl, amount, BigDecimal.ZERO, false);
+        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, paymentUrl, amount, BigDecimal.ZERO, false, null, null, null, "USD", null, null);
+    }
+
+    public PaymentResponseDTO(
+            Long paymentId,
+            Long userId,
+            String username,
+            String userEmail,
+            Long courseId,
+            String courseTitle,
+            BigDecimal amount,
+            String provider,
+            String providerReference,
+            PaymentStatus status,
+            Timestamp createdAt,
+            Timestamp updatedAt,
+            String paymentUrl,
+            BigDecimal originalAmount,
+            BigDecimal discountAmount,
+            Boolean isReEnrollmentDiscount
+    ) {
+        this(paymentId, userId, username, userEmail, courseId, courseTitle, amount, provider, providerReference, status, createdAt, updatedAt, paymentUrl, originalAmount, discountAmount, isReEnrollmentDiscount, null, null, null, "USD", null, null);
     }
 }

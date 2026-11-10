@@ -28,7 +28,13 @@ public class PaymentMapper {
                 paymentUrl,
                 payment.getOriginalAmount() != null ? payment.getOriginalAmount() : payment.getAmount(),
                 payment.getDiscountAmount() != null ? payment.getDiscountAmount() : BigDecimal.ZERO,
-                payment.getIsReEnrollmentDiscount() != null ? payment.getIsReEnrollmentDiscount() : false
+                payment.getIsReEnrollmentDiscount() != null ? payment.getIsReEnrollmentDiscount() : false,
+                payment.getKhqrPayload(),
+                payment.getKhqrMd5(),
+                payment.getBakongDeepLink(),
+                payment.getCurrency() != null ? payment.getCurrency() : "USD",
+                payment.getExpiresAt(),
+                payment.getPaidAt()
         );
     }
 }

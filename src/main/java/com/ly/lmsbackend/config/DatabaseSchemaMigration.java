@@ -70,6 +70,18 @@ public class DatabaseSchemaMigration implements ApplicationRunner {
         applySql("UPDATE payments SET discount_amount = 0.00 WHERE discount_amount IS NULL");
         applySql("UPDATE payments SET is_re_enrollment_discount = FALSE WHERE is_re_enrollment_discount IS NULL");
 
+        // Bakong Open API / KHQR integration columns
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS khqr_payload TEXT");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS khqr_md5 VARCHAR(64)");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS bakong_deep_link TEXT");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'USD'");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITHOUT TIME ZONE");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITHOUT TIME ZONE");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS bakong_transaction_hash VARCHAR(128)");
+        applySql("ALTER TABLE IF EXISTS payments ADD COLUMN IF NOT EXISTS payer_account_id VARCHAR(128)");
+        applySql("UPDATE payments SET currency = 'USD' WHERE currency IS NULL");
+        applySql("CREATE UNIQUE INDEX IF NOT EXISTS uk_payments_khqr_md5 ON payments(khqr_md5) WHERE khqr_md5 IS NOT NULL");
+
         // Ensure certificates table exists
         applySql("""
             CREATE TABLE IF NOT EXISTS certificates (

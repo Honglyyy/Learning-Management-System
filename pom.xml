@@ -127,6 +127,12 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>kh.gov.nbc.bakong_khqr</groupId>
+			<artifactId>sdk-java</artifactId>
+			<version>1.0.0.17</version>
+		</dependency>
 	</dependencies>
 
 	<build>

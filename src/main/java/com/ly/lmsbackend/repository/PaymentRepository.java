@@ -2,11 +2,14 @@ package com.ly.lmsbackend.repository;
 
 import com.ly.lmsbackend.model.PaymentStatus;
 import com.ly.lmsbackend.model.Payments;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +25,21 @@ public interface PaymentRepository extends JpaRepository<Payments, Long> {
             Long courseId,
             PaymentStatus status
     );
+
+    Optional<Payments> findFirstByUser_EmailAndCourse_CourseIdAndProviderAndStatusOrderByCreatedAtDesc(
+            String email,
+            Long courseId,
+            String provider,
+            PaymentStatus status
+    );
+
+    List<Payments> findByProviderAndStatusAndKhqrMd5IsNotNull(String provider, PaymentStatus status);
+
+    List<Payments> findByProviderAndStatusAndExpiresAtBefore(String provider, PaymentStatus status, Timestamp before);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Payments p WHERE p.paymentId = :paymentId")
+    Optional<Payments> findByIdForUpdate(@Param("paymentId") Long paymentId);
 
     @Modifying
     @Query("""

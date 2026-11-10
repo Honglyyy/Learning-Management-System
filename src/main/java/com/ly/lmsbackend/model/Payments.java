@@ -52,6 +52,30 @@ public class Payments {
     @Column(nullable = false)
     private PaymentStatus status = PaymentStatus.PENDING;
 
+    @Column(name = "khqr_payload", columnDefinition = "TEXT")
+    private String khqrPayload;
+
+    @Column(name = "khqr_md5", length = 64)
+    private String khqrMd5;
+
+    @Column(name = "bakong_deep_link", columnDefinition = "TEXT")
+    private String bakongDeepLink;
+
+    @Column(length = 10)
+    private String currency = "USD";
+
+    @Column(name = "expires_at")
+    private Timestamp expiresAt;
+
+    @Column(name = "paid_at")
+    private Timestamp paidAt;
+
+    @Column(name = "bakong_transaction_hash", length = 128)
+    private String bakongTransactionHash;
+
+    @Column(name = "payer_account_id", length = 128)
+    private String payerAccountId;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private Timestamp createdAt;

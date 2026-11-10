@@ -197,25 +197,27 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, plainText, htmlContent);
     }
 
-    public void sendAbaPayWayEnrollmentSuccess(
+    public void sendPaymentEnrollmentSuccess(
             String toEmail,
             String studentName,
             String courseTitle,
             String instructorName,
             String amount,
+            String paymentMethod,
             String transactionRef,
             String enrollmentDate,
             String courseUrl
     ) {
+        String methodLabel = (paymentMethod != null && !paymentMethod.isBlank()) ? paymentMethod : "Online Payment";
         String subject = "🎉 You're In! Course Access Confirmed for " + courseTitle;
         String plainText = "Dear " + studentName + ",\n\n"
-                + "Great news! We have successfully received and verified your payment via ABA PayWay.\n"
-                + "Your enrollment for \"" + courseTitle + "\" has been approved, and your access is now fully active!\n\n"
+                + "Great news! We have confirmed your enrollment and payment (" + methodLabel + ").\n"
+                + "Your access for \"" + courseTitle + "\" is now fully active!\n\n"
                 + "Details:\n"
                 + "• Course: " + courseTitle + "\n"
                 + "• Instructor: " + instructorName + "\n"
                 + "• Amount Paid: $" + amount + " USD\n"
-                + "• Method: ABA PayWay\n"
+                + "• Method: " + methodLabel + "\n"
                 + "• Transaction Reference: " + transactionRef + "\n"
                 + "• Date: " + enrollmentDate + "\n\n"
                 + "Start learning: " + courseUrl + "\n\n"
@@ -226,7 +228,7 @@ public class EmailService {
                 "<h2 style=\"margin:0 0 10px;font-size:18px;color:#0f172a;\">Enrollment Confirmed 🎉</h2>\n"
                 + "<p style=\"margin:0 0 18px;font-size:14px;color:#475569;line-height:1.6;\">\n"
                 + "  Dear <strong>" + studentName + "</strong>,<br>\n"
-                + "  Your payment via <strong>ABA PayWay</strong> has been verified. You now have full lifetime access to <strong>" + courseTitle + "</strong>.\n"
+                + "  Your payment via <strong>" + methodLabel + "</strong> has been verified. You now have full access to <strong>" + courseTitle + "</strong>.\n"
                 + "</p>\n"
                 + "<table role=\"presentation\" width=\"100%\" style=\"border-collapse:collapse;margin:20px 0;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;overflow:hidden;\">\n"
                 + "  <tr style=\"border-bottom:1px solid #e2e8f0;\">\n"
@@ -243,7 +245,7 @@ public class EmailService {
                 + "  </tr>\n"
                 + "  <tr style=\"border-bottom:1px solid #e2e8f0;\">\n"
                 + "    <td style=\"padding:10px 16px;font-size:13px;color:#64748b;\">Payment Method:</td>\n"
-                + "    <td style=\"padding:10px 16px;font-size:13px;color:#0f172a;\">ABA PayWay (KHQR / Card)</td>\n"
+                + "    <td style=\"padding:10px 16px;font-size:13px;color:#0f172a;\">" + methodLabel + "</td>\n"
                 + "  </tr>\n"
                 + "  <tr style=\"border-bottom:1px solid #e2e8f0;\">\n"
                 + "    <td style=\"padding:10px 16px;font-size:13px;color:#64748b;\">Reference:</td>\n"

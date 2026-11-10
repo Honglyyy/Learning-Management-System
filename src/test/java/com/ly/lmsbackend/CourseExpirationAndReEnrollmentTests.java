@@ -321,7 +321,7 @@ public class CourseExpirationAndReEnrollmentTests {
             return p;
         });
 
-        PaymentCheckoutRequestDTO checkoutDTO = new PaymentCheckoutRequestDTO(1L, "ABA_PAYWAY");
+        PaymentCheckoutRequestDTO checkoutDTO = new PaymentCheckoutRequestDTO(1L, null);
         PaymentResponseDTO response = paymentService.createCheckout(checkoutDTO, "student1@example.com");
 
         Payments savedPayment = paymentCaptor.getValue();
@@ -329,9 +329,12 @@ public class CourseExpirationAndReEnrollmentTests {
         assertEquals(0, BigDecimal.valueOf(100.00).compareTo(savedPayment.getOriginalAmount()));
         assertEquals(0, BigDecimal.valueOf(50.00).compareTo(savedPayment.getDiscountAmount()));
         assertEquals(0, BigDecimal.valueOf(50.00).compareTo(savedPayment.getAmount()), "Final price must be 50% of 100.00");
+        assertNotEquals("ABA_PAYWAY", savedPayment.getProvider());
+        assertFalse(savedPayment.getProviderReference().startsWith("aba_"));
 
         assertTrue(response.isReEnrollmentDiscount());
         assertEquals(0, BigDecimal.valueOf(50.00).compareTo(response.amount()));
+        assertNull(response.paymentUrl());
     }
 
     @Test
@@ -448,5 +451,44 @@ public class CourseExpirationAndReEnrollmentTests {
         Timestamp minExpected = Timestamp.from(Instant.now().plus(170, ChronoUnit.DAYS));
         assertTrue(expiredEnrollment.getExpirationDate().after(minExpected),
                 "New expiration date must be ~180 days in the future");
+    }
+
+    @Test
+    @DisplayName("PaymentService blocks manual confirmation for paid payments even for admins")
+    void testConfirmPaymentBlocksPaidCoursesForStudentAndAdmin() {
+        PaymentMapper paymentMapper = new PaymentMapper();
+        EmailService emailService = Mockito.mock(EmailService.class);
+        NotificationService notificationService = Mockito.mock(NotificationService.class);
+
+        PaymentService paymentService = new PaymentService(
+                paymentRepository,
+                courseRepository,
+                userRepository,
+                enrollmentService,
+                paymentMapper,
+                emailService,
+                notificationService,
+                enrollmentRepository
+        );
+
+        Payments paidPayment = new Payments();
+        paidPayment.setPaymentId(77L);
+        paidPayment.setUser(student);
+        paidPayment.setCourse(defaultCourse);
+        paidPayment.setAmount(BigDecimal.valueOf(50.00));
+        paidPayment.setProvider("UNASSIGNED");
+        paidPayment.setStatus(PaymentStatus.PENDING);
+
+        when(paymentRepository.findById(77L)).thenReturn(Optional.of(paidPayment));
+
+        ResponseStatusException studentEx = assertThrows(ResponseStatusException.class, () ->
+                paymentService.confirmPayment(77L, "student1@example.com")
+        );
+        assertEquals(HttpStatus.FORBIDDEN, studentEx.getStatusCode());
+
+        ResponseStatusException adminEx = assertThrows(ResponseStatusException.class, () ->
+                paymentService.confirmPayment(77L, "admin@example.com")
+        );
+        assertEquals(HttpStatus.FORBIDDEN, adminEx.getStatusCode());
     }
 }

@@ -3,7 +3,6 @@ package com.ly.lmsbackend.controller;
 import com.ly.lmsbackend.dto.paymentdtos.CheckoutQuoteDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentCheckoutRequestDTO;
 import com.ly.lmsbackend.dto.paymentdtos.PaymentResponseDTO;
-import com.ly.lmsbackend.dto.paymentdtos.PaymentStatusUpdateDTO;
 import com.ly.lmsbackend.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -62,15 +61,6 @@ public class PaymentController {
     @GetMapping("/api/payments")
     public ResponseEntity<List<PaymentResponseDTO>> getAllPayments() {
         return ResponseEntity.ok(paymentService.getAllPayments());
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/api/payments/{id}/status")
-    public ResponseEntity<PaymentResponseDTO> updateStatus(
-            @PathVariable Long id,
-            @Valid @RequestBody PaymentStatusUpdateDTO dto
-    ) {
-        return ResponseEntity.ok(paymentService.updateStatus(id, dto.status(), dto.providerReference()));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

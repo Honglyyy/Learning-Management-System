@@ -9,7 +9,6 @@ import com.ly.lmsbackend.model.Courses;
 import com.ly.lmsbackend.model.Enrollments;
 import com.ly.lmsbackend.model.PaymentStatus;
 import com.ly.lmsbackend.model.Payments;
-import com.ly.lmsbackend.model.Roles;
 import com.ly.lmsbackend.model.Users;
 import com.ly.lmsbackend.repository.CourseRepository;
 import com.ly.lmsbackend.repository.EnrollmentRepository;
@@ -101,6 +100,12 @@ public class PaymentService {
             }
         }
 
+        String requestedProvider = dto.provider() == null ? null : dto.provider().trim();
+        String resolvedProvider = (requestedProvider == null || requestedProvider.isBlank())
+                ? (finalAmount.compareTo(BigDecimal.ZERO) == 0 ? "FREE" : "UNASSIGNED")
+                : requestedProvider;
+        String refPrefix = finalAmount.compareTo(BigDecimal.ZERO) == 0 ? "free_" : "txn_";
+
         Payments payment = new Payments();
         payment.setUser(user);
         payment.setCourse(course);
@@ -108,8 +113,8 @@ public class PaymentService {
         payment.setOriginalAmount(basePrice);
         payment.setDiscountAmount(discountAmount);
         payment.setIsReEnrollmentDiscount(hasReEnrollmentDiscount);
-        payment.setProvider(dto.provider() == null || dto.provider().isBlank() ? "ABA_PAYWAY" : dto.provider());
-        payment.setProviderReference("aba_" + UUID.randomUUID().toString().substring(0, 8));
+        payment.setProvider(resolvedProvider);
+        payment.setProviderReference(refPrefix + UUID.randomUUID().toString().substring(0, 8));
         payment.setStatus(PaymentStatus.PENDING);
 
         return paymentMapper.toDTO(paymentRepository.save(payment));
@@ -157,18 +162,18 @@ public class PaymentService {
 
     public PaymentResponseDTO confirmPayment(Long paymentId, String email) {
         Payments payment = getPayment(paymentId);
-        Users user = getUser(email);
 
-        boolean isAdmin = user.getRole() == Roles.ADMIN;
-        boolean isOwner = payment.getUser().getEmail().equals(email);
-
-        if (!isAdmin && !isOwner) {
+        boolean isOwner = payment.getUser() != null && email.equals(payment.getUser().getEmail());
+        if (!isOwner) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have permission to confirm this payment");
         }
 
-        // Paid courses must be confirmed by an admin after the student pays via ABA PayWay
-        if (!isAdmin && payment.getAmount() != null && payment.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Paid courses require admin confirmation after completing payment via ABA PayWay");
+        // Paid courses must be verified directly against the bank/gateway response (e.g. Bakong)
+        if (payment.getAmount() != null && payment.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Paid courses require automated bank payment verification and cannot be manually confirmed"
+            );
         }
 
         if (payment.getStatus() == PaymentStatus.PAID) {
@@ -178,7 +183,7 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PAID);
         Payments saved = paymentRepository.save(payment);
         enrollIfNeeded(saved, saved.getUser().getEmail());
-        notifyStudentAbaPaymentApproved(saved);
+        notifyStudentPaymentConfirmed(saved);
 
         return paymentMapper.toDTO(saved);
     }
@@ -195,23 +200,6 @@ public class PaymentService {
                 .stream()
                 .map(paymentMapper::toDTO)
                 .toList();
-    }
-
-    public PaymentResponseDTO updateStatus(Long paymentId, PaymentStatus status, String providerReference) {
-        Payments payment = getPayment(paymentId);
-        PaymentStatus previousStatus = payment.getStatus();
-        payment.setStatus(status);
-        if (providerReference != null && !providerReference.isBlank()) {
-            payment.setProviderReference(providerReference);
-        }
-
-        Payments saved = paymentRepository.save(payment);
-        if (status == PaymentStatus.PAID && previousStatus != PaymentStatus.PAID) {
-            enrollIfNeeded(saved, saved.getUser().getEmail());
-            notifyStudentAbaPaymentApproved(saved);
-        }
-
-        return paymentMapper.toDTO(saved);
     }
 
     public void deletePayment(Long paymentId) {
@@ -238,7 +226,7 @@ public class PaymentService {
         }
     }
 
-    private void notifyStudentAbaPaymentApproved(Payments payment) {
+    protected void notifyStudentPaymentConfirmed(Payments payment) {
         if (emailService == null || payment == null || payment.getUser() == null) {
             return;
         }
@@ -259,17 +247,21 @@ public class PaymentService {
             }
 
             String amount = payment.getAmount() != null ? payment.getAmount().toPlainString() : "0.00";
-            String txnRef = payment.getProviderReference() != null ? payment.getProviderReference() : "ABA-" + payment.getPaymentId();
+            String paymentMethod = (payment.getProvider() != null && !payment.getProvider().isBlank())
+                    ? payment.getProvider()
+                    : "Online Payment";
+            String txnRef = payment.getProviderReference() != null ? payment.getProviderReference() : "PAY-" + payment.getPaymentId();
             String enrollmentDate = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(new java.util.Date());
             Long courseId = course != null ? course.getCourseId() : null;
             String courseUrl = courseId != null ? "http://localhost:5173/courses/" + courseId : "http://localhost:5173/my/enrollments";
 
-            emailService.sendAbaPayWayEnrollmentSuccess(
+            emailService.sendPaymentEnrollmentSuccess(
                     student.getEmail(),
                     studentName,
                     courseTitle,
                     instructorName,
                     amount,
+                    paymentMethod,
                     txnRef,
                     enrollmentDate,
                     courseUrl
@@ -278,8 +270,8 @@ public class PaymentService {
             if (notificationService != null) {
                 notificationService.sendNotification(
                         student,
-                        "Payment Approved",
-                        "Your payment for '" + courseTitle + "' has been approved! You can now access the course.",
+                        "Payment Confirmed",
+                        "Your payment for '" + courseTitle + "' has been confirmed! You can now access the course.",
                         "PAYMENT",
                         courseUrl
                 );
